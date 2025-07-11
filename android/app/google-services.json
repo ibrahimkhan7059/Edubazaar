@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1089794906265",
+    "project_id": "edubazaar-new-97923",
+    "storage_bucket": "edubazaar-new-97923.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1089794906265:android:910f4de8adcc4a6f4d4008",
+        "android_client_info": {
+          "package_name": "com.mycompany.edubazaar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1089794906265-psbg9tbs1egrsha2ukmdbl7mdtqicj5l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mycompany.edubazaar",
+            "certificate_hash": "bfcb2c3ed3e54bdffdea0edc32c80a62e790a518"
+          }
+        },
+        {
+          "client_id": "1089794906265-q950ia46kkfo909gdt9h72nnofot1o5l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpbkDeeaHHhZXhbDBXrtno1XCsBOXmIK8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1089794906265-q950ia46kkfo909gdt9h72nnofot1o5l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
