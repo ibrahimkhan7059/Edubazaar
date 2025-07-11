@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme.dart';
 import '../../models/listing.dart';
 import '../../services/marketplace_service.dart';
 import 'create_listing_screen.dart';
+import 'listing_detail_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   const MarketplaceScreen({super.key});
@@ -336,9 +338,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   Widget _buildListingCard(Listing listing) {
     return GestureDetector(
       onTap: () {
-        // TODO: Navigate to listing details
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Viewing ${listing.title}')),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ListingDetailScreen(listing: listing),
+          ),
         );
       },
       child: Container(
@@ -356,7 +360,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image placeholder
+            // Image
             Container(
               height: 100,
               decoration: BoxDecoration(
@@ -368,20 +372,69 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               ),
               child: Stack(
                 children: [
-                  Center(
-                    child: Icon(
-                      _getIconForType(listing.type),
-                      size: 35,
-                      color: AppTheme.primaryColor,
+                  // Main image or placeholder
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
                     ),
+                    child: listing.images.isNotEmpty
+                        ? _buildListingImage(listing.images.first, listing.type)
+                        : Container(
+                            width: double.infinity,
+                            height: 100,
+                            color: AppTheme.backgroundColor,
+                            child: Center(
+                              child: Icon(
+                                _getIconForType(listing.type),
+                                size: 35,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
                   ),
+
+                  // Multiple images indicator
+                  if (listing.images.length > 1)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.photo_library,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${listing.images.length}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                   // Favorite button
                   Positioned(
                     top: 6,
                     right: 6,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: IconButton(
@@ -400,11 +453,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       ),
                     ),
                   ),
+
                   // Donation badge
                   if (listing.isDonation)
                     Positioned(
-                      top: 6,
-                      left: 6,
+                      bottom: 6,
+                      right: 6,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 3),
@@ -499,6 +553,73 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListingImage(String imageUrl, ListingType listingType) {
+    // Try CachedNetworkImage first, with fallback to regular Image.network
+    try {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        width: double.infinity,
+        height: 100,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(
+          color: AppTheme.backgroundColor,
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppTheme.primaryColor,
+              ),
+            ),
+          ),
+        ),
+        errorWidget: (context, url, error) =>
+            _buildFallbackImage(imageUrl, listingType),
+      );
+    } catch (e) {
+      // If CachedNetworkImage fails to load, use regular Image.network
+      return _buildFallbackImage(imageUrl, listingType);
+    }
+  }
+
+  Widget _buildFallbackImage(String imageUrl, ListingType listingType) {
+    return Image.network(
+      imageUrl,
+      width: double.infinity,
+      height: 100,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          return child;
+        }
+        return Container(
+          color: AppTheme.backgroundColor,
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppTheme.primaryColor,
+              ),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) => Container(
+        color: AppTheme.backgroundColor,
+        child: Center(
+          child: Icon(
+            _getIconForType(listingType),
+            size: 35,
+            color: AppTheme.primaryColor,
+          ),
         ),
       ),
     );
