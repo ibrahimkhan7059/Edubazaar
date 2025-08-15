@@ -1,0 +1,17 @@
+{
+  "root": true,
+  "env": {
+    "es6": true,
+    "node": true
+  },
+  "rules": {
+    "quotes": "off",
+    "indent": "off",
+    "max-len": "off",
+    "object-curly-spacing": "off",
+    "comma-dangle": "off",
+    "arrow-parens": "off",
+    "padded-blocks": "off",
+    "no-trailing-spaces": "off"
+  }
+}

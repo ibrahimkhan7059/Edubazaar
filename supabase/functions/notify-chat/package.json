@@ -1,0 +1,12 @@
+{
+  "name": "notify-chat",
+  "version": "1.0.0",
+  "description": "Edge Function for sending chat notifications",
+  "main": "index.ts",
+  "scripts": {
+    "deploy": "supabase functions deploy"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.3"
+  }
+} 

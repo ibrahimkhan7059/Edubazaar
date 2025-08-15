@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Disable deprecation warnings for Firebase Messaging -->
+    <issue id="Deprecation" severity="ignore" />
+    <issue id="UnsafeNativeCodeLocation" severity="ignore" />
+    <!-- Suppress warnings for third-party libraries -->
+    <issue id="GradleDependency" severity="ignore" />
+</lint>
