@@ -1,4 +1,4 @@
-# edubazaar
+# EduBazaar
 
 A new Flutter project.
 
