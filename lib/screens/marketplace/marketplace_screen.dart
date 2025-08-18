@@ -56,7 +56,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         _favoriteStatus[listing.id] = isFavorited;
       }
     } catch (e) {
-      print('Error loading favorite status: $e');
+      // Error loading favorite status handled silently
     } finally {
       if (mounted) {
         setState(() => _isLoadingFavorites = false);
@@ -94,8 +94,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _initializeViewCounts();
       await _loadFavoriteStatus();
     } catch (e) {
-      print('Error loading listings: $e');
-
       // Show error to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -382,17 +380,33 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         await _refreshFavoriteStatus();
         await _refreshViewCounts();
       },
-      child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.8,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: _filteredListings.length,
-        itemBuilder: (context, index) {
-          return _buildListingCard(_filteredListings[index]);
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate responsive grid
+          final double screenWidth = constraints.maxWidth;
+          int crossAxisCount = 2;
+          double childAspectRatio = 0.75;
+
+          if (screenWidth > 600) {
+            crossAxisCount = 3;
+            childAspectRatio = 0.8;
+          } else if (screenWidth < 360) {
+            childAspectRatio = 0.7;
+          }
+
+          return GridView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: _filteredListings.length,
+            itemBuilder: (context, index) {
+              return _buildListingCard(_filteredListings[index]);
+            },
+          );
         },
       ),
     );
@@ -431,7 +445,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           children: [
             // Image
             Container(
-              height: 106,
+              height: 100,
               decoration: const BoxDecoration(
                 color: AppTheme.backgroundColor,
                 borderRadius: BorderRadius.only(
@@ -451,7 +465,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                         ? _buildListingImage(listing.images.first, listing.type)
                         : Container(
                             width: double.infinity,
-                            height: 106,
+                            height: 100,
                             color: AppTheme.backgroundColor,
                             child: Center(
                               child: Icon(
@@ -539,92 +553,119 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      listing.title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
+                    // Title with flexible height
+                    Flexible(
+                      flex: 3,
+                      child: Text(
+                        listing.title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
 
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
 
+                    // Condition
                     if (listing.condition != null)
-                      Text(
-                        listing.condition!.displayName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: AppTheme.textSecondary,
+                      Flexible(
+                        flex: 1,
+                        child: Text(
+                          listing.condition!.displayName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: AppTheme.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
 
-                    // Location and Coordinates
+                    // Location with better overflow handling
                     if (listing.pickupLocation != null ||
                         listing.hasCoordinates) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on,
-                              size: 12, color: AppTheme.textHint),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              listing.pickupLocation ?? 'Location available',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: AppTheme.textHint,
+                      const SizedBox(height: 2),
+                      Flexible(
+                        flex: 1,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on,
+                                size: 10, color: AppTheme.textHint),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                listing.pickupLocation ?? 'Location available',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9,
+                                  color: AppTheme.textHint,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
 
-                    const Spacer(),
+                    const Spacer(flex: 1),
 
-                    // Price
+                    // Price and views row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Expanded(
+                        // Price with flexible width
+                        Flexible(
+                          flex: 3,
                           child: Text(
                             listing.isDonation
                                 ? 'FREE'
                                 : 'Rs. ${listing.price!.toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
-                              fontSize: 15,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: listing.isDonation
                                   ? AppTheme.donationColor
                                   : AppTheme.priceColor,
                             ),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.visibility,
-                                size: 11, color: AppTheme.textHint),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${_viewCounts[listing.id] ?? listing.views}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 9,
-                                color: AppTheme.textHint,
+                        const SizedBox(width: 4),
+                        // Views count
+                        Flexible(
+                          flex: 1,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.visibility,
+                                  size: 10, color: AppTheme.textHint),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  '${_viewCounts[listing.id] ?? listing.views}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 8,
+                                    color: AppTheme.textHint,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -644,7 +685,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       return CachedNetworkImage(
         imageUrl: imageUrl,
         width: double.infinity,
-        height: 106,
+        height: 100,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(
           color: AppTheme.backgroundColor,
@@ -670,7 +711,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     return Image.network(
       imageUrl,
       width: double.infinity,
-      height: 106,
+      height: 100,
       fit: BoxFit.cover,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) {
@@ -775,8 +816,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         );
       }
     } catch (e) {
-      print('Error toggling favorite: $e');
-
       // Revert the optimistic update on error
       if (mounted) {
         final originalStatus =
@@ -819,7 +858,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         }
       }
     } catch (e) {
-      print('Error refreshing view counts: $e');
+      // Error refreshing view counts handled silently
     }
   }
 

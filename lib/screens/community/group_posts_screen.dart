@@ -52,27 +52,21 @@ class _GroupPostsScreenState extends State<GroupPostsScreen> {
   Future<void> _loadPosts() async {
     if (!mounted) return;
 
-    print('🔍 Loading posts for group: ${widget.groupId}');
-
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      print('🔍 Calling CommunityService.getGroupPosts...');
       final posts = await CommunityService.getGroupPosts(widget.groupId);
-      print('🔍 Posts loaded: ${posts.length} posts');
 
       if (mounted) {
         setState(() {
           _posts = posts;
           _isLoading = false;
         });
-        print('✅ Posts loaded successfully');
       }
     } catch (e) {
-      print('❌ Error loading posts: $e');
       if (mounted) {
         setState(() {
           _error = 'Failed to load posts: $e';
@@ -83,10 +77,6 @@ class _GroupPostsScreenState extends State<GroupPostsScreen> {
   }
 
   Future<void> _createPost() async {
-    print('🔍 Creating post for group: ${widget.groupId}');
-    print('🔍 Post type: $_selectedPostType');
-    print('🔍 Content: ${_contentController.text}');
-
     if (_contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter some content')),
@@ -106,12 +96,9 @@ class _GroupPostsScreenState extends State<GroupPostsScreen> {
 
       // Upload image if selected
       if (_selectedImage != null) {
-        print('🔍 Uploading image...');
         imageUrl = await ImageService.uploadGroupCoverImage(_selectedImage!);
-        print('🔍 Image uploaded: $imageUrl');
       }
 
-      print('🔍 Calling CommunityService.createGroupPost...');
       await CommunityService.createGroupPost(
         groupId: widget.groupId,
         postType: _selectedPostType,
@@ -124,8 +111,6 @@ class _GroupPostsScreenState extends State<GroupPostsScreen> {
         fileName: fileName,
         fileSize: fileSize,
       );
-
-      print('✅ Post created successfully');
 
       // Clear form
       _contentController.clear();
@@ -143,7 +128,6 @@ class _GroupPostsScreenState extends State<GroupPostsScreen> {
         );
       }
     } catch (e) {
-      print('❌ Error creating post: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to create post: $e')),
@@ -182,18 +166,7 @@ class _GroupPostsScreenState extends State<GroupPostsScreen> {
 
   Future<void> _pickFile() async {
     try {
-      // File picker intentionally disabled in production (debug-only removed)
-
-      // FilePickerResult? result = await FilePicker.platform.pickFiles(
-      //   type: FileType.any,
-      //   allowMultiple: false,
-      // );
-
-      // if (result != null) {
-      //   setState(() {
-      //     _selectedFile = result.files.first;
-      //   });
-      // }
+      // File attachment functionality to be implemented
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to pick file: $e')),
@@ -598,7 +571,7 @@ class _GroupPostsScreenState extends State<GroupPostsScreen> {
                         ],
                       ),
                     ),
-                    // Removed debug-only download action
+                    // File download functionality to be implemented
                   ],
                 ),
               ),

@@ -1206,7 +1206,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Location permission denied. Please allow to auto-fill coordinates.'),
+              content: Text(
+                  'Location permission denied. Please allow to auto-fill coordinates.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -1218,7 +1219,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Location permission permanently denied. Enable it from app settings.'),
+              content: Text(
+                  'Location permission permanently denied. Enable it from app settings.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -1285,7 +1287,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             imageUrls.add(imageUrl);
           }
         } catch (e) {
-          print('Failed to upload image $i: $e');
           // Continue with other images even if one fails
         }
       }

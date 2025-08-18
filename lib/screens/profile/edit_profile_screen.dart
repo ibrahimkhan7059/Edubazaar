@@ -214,9 +214,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         // Upload new image and get new URL
         profileImageUrl = await ProfileService.uploadProfilePicture(
             userId, _selectedProfileImage!);
-        print('🖼️ New image uploaded: $profileImageUrl');
+        // New image uploaded successfully
       } else {
-        print('🖼️ No new image, preserving existing: $profileImageUrl');
+        // No new image, preserving existing
       }
 
       // Prepare update data
@@ -246,11 +246,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         // User explicitly removed the image - delete it from storage
         await ProfileService.deleteProfilePicture(userId);
         updateData['profile_pic_url'] = null;
-        print('🖼️ Image removed by user and deleted from storage');
+        // Image removed by user and deleted from storage
       } else {
         // Preserve existing image URL or use new uploaded image URL
         updateData['profile_pic_url'] = profileImageUrl;
-        print('🖼️ Profile image URL: $profileImageUrl');
       }
 
       // Update profile in database
@@ -802,4 +801,3 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
- 

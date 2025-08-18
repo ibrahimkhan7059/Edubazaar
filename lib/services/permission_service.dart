@@ -25,7 +25,6 @@ class PermissionService {
 
       return false;
     } catch (e) {
-      print('❌ Error requesting camera permission: $e');
       return false;
     }
   }
@@ -33,98 +32,70 @@ class PermissionService {
   /// Check and request storage permission
   static Future<bool> requestStoragePermission() async {
     try {
-      print('📱 Platform: ${Platform.operatingSystem}');
-
       if (Platform.isAndroid) {
         // For Android 13+ (API 33+), use photos permission
         try {
           final photos = await Permission.photos.status;
-          print('📷 Photos permission status: $photos');
 
           if (photos.isGranted) {
-            print('✅ Photos permission already granted');
             return true;
           }
 
           if (photos.isDenied) {
-            print('📷 Requesting photos permission...');
             final result = await Permission.photos.request();
-            print('📷 Photos permission result: $result');
             return result.isGranted;
           }
 
           if (photos.isPermanentlyDenied) {
-            print('❌ Photos permission permanently denied');
             return false;
           }
 
           // If photos permission doesn't work, try storage permission for older Android
-          print('📷 Trying storage permission as fallback...');
           final storage = await Permission.storage.status;
-          print('💾 Storage permission status: $storage');
 
           if (storage.isGranted) {
-            print('✅ Storage permission granted');
             return true;
           }
 
           if (storage.isDenied) {
-            print('💾 Requesting storage permission...');
             final result = await Permission.storage.request();
-            print('💾 Storage permission result: $result');
             return result.isGranted;
           }
 
-          print('❌ Both photos and storage permissions denied');
           return false;
         } catch (e) {
-          print('⚠️ Photos permission error, trying storage: $e');
-
           // Fallback to storage permission
           final storage = await Permission.storage.status;
-          print('💾 Fallback storage permission status: $storage');
 
           if (storage.isGranted) {
-            print('✅ Fallback storage permission granted');
             return true;
           }
 
           if (storage.isDenied) {
-            print('💾 Requesting fallback storage permission...');
             final result = await Permission.storage.request();
-            print('💾 Fallback storage permission result: $result');
             return result.isGranted;
           }
 
-          print('❌ All permission attempts failed');
           return false;
         }
       } else if (Platform.isIOS) {
         final photos = await Permission.photos.status;
-        print('📷 iOS Photos permission status: $photos');
 
         if (photos.isGranted) {
-          print('✅ iOS Photos permission granted');
           return true;
         }
 
         if (photos.isDenied) {
-          print('📷 Requesting iOS photos permission...');
           final result = await Permission.photos.request();
-          print('📷 iOS Photos permission result: $result');
           return result.isGranted;
         }
 
-        print('❌ iOS Photos permission denied');
         return false;
       }
 
       // For other platforms, assume permission is granted
-      print('✅ Other platform, assuming permission granted');
       return true;
     } catch (e) {
-      print('❌ Error requesting storage permission: $e');
-      print('❌ Error type: ${e.runtimeType}');
       // Fallback to allowing access for development
       return true;
     }

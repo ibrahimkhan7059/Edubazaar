@@ -69,29 +69,23 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen>
     setState(() => _isLoading = true);
 
     try {
-      print('📊 Loading transaction history...');
-
       // Try to load real transactions first
       List<UserTransaction> realTransactions = [];
       try {
         realTransactions = await _loadRealTransactions();
-        print('✅ Loaded ${realTransactions.length} real transactions');
       } catch (e) {
-        print('ℹ️ Real transactions not available: $e');
+        // Real transactions not available
       }
 
       // Generate simulated transactions from listings for demo
       List<UserTransaction> simulatedTransactions =
           await _generateSimulatedTransactions();
-      print(
-          '✅ Generated ${simulatedTransactions.length} simulated transactions');
 
       // Combine and sort
       _allTransactions = [...realTransactions, ...simulatedTransactions];
       _allTransactions
           .sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
     } catch (e) {
-      print('❌ Error loading transactions: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -201,7 +195,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen>
         ));
       }
     } catch (e) {
-      print('❌ Error generating simulated transactions: $e');
+      // Error generating simulated transactions handled silently
     }
 
     return simulated;
@@ -740,7 +734,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen>
                                 child: OutlinedButton(
                                   onPressed: () {
                                     Navigator.pop(context);
-                                    // TODO: Implement cancel transaction
+                                    // Cancel transaction feature to be implemented
                                   },
                                   child: Text(
                                     'Cancel',
@@ -754,7 +748,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen>
                                 child: ElevatedButton(
                                   onPressed: () {
                                     Navigator.pop(context);
-                                    // TODO: Implement complete transaction
+                                    // Complete transaction feature to be implemented
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryColor,
@@ -817,4 +811,3 @@ extension StringCapitalization on String {
     return "${this[0].toUpperCase()}${substring(1)}";
   }
 }
- 

@@ -78,84 +78,92 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create simple trigger function that stores notifications and calls Edge Function
-CREATE OR REPLACE FUNCTION notify_chat_on_message()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION notify_chat_on_message() RETURNS TRIGGER AS $$
 DECLARE
-  recipient_id UUID;
-  sender_name TEXT;
-  response TEXT;
-  service_key TEXT;
+  conversation_data jsonb;
+  sender_profile jsonb;
+  recipient_id text;
+  service_key text;
+  http_request net.http_request;
+  http_response net.http_response;
+  edge_function_url text;
+  payload jsonb;
 BEGIN
-  -- Get conversation details to find recipient
+  -- Get conversation data
+  SELECT row_to_json(c)::jsonb INTO conversation_data
+  FROM conversations c
+  WHERE c.id = NEW.conversation_id;
+
+  -- Get sender profile data
+  SELECT row_to_json(p)::jsonb INTO sender_profile
+  FROM profiles p
+  WHERE p.id = NEW.sender_id;
+
+  -- Determine recipient_id (the other user in the conversation)
   SELECT 
     CASE 
-      WHEN participant_1_id = NEW.sender_id THEN participant_2_id
-      ELSE participant_1_id
+      WHEN user1_id = NEW.sender_id THEN user2_id 
+      ELSE user1_id 
     END INTO recipient_id
   FROM conversations 
   WHERE id = NEW.conversation_id;
-  
-  -- Get sender name
-  SELECT name INTO sender_name
-  FROM user_profiles 
-  WHERE id = NEW.sender_id;
-  
-  -- Insert notification directly into database
-  INSERT INTO chat_notifications (
-    user_id, 
-    title, 
-    body, 
-    data
-  ) VALUES (
-    recipient_id,
-    'New Message',
-    COALESCE(sender_name, 'Someone') || ': ' || LEFT(NEW.message_text, 50),
-    json_build_object(
-      'type', 'message_inserted',
-      'conversationId', NEW.conversation_id,
-      'messageId', NEW.id,
-      'senderId', NEW.sender_id,
-      'messageText', NEW.message_text,
-      'timestamp', NOW()
-    )
+
+  -- Get service key from app_config
+  SELECT value INTO service_key FROM app_config WHERE key = 'service_key';
+
+  -- Log the start of notification process
+  INSERT INTO logs (event_type, details) 
+  VALUES ('notification_start', json_build_object('message_id', NEW.id, 'conversation_id', NEW.conversation_id));
+
+  -- Log recipient info
+  INSERT INTO logs (event_type, details) 
+  VALUES ('notification_recipient', json_build_object('recipient_id', recipient_id));
+
+  -- Construct the Edge Function URL
+  edge_function_url := 'https://jpsgjzprweboqnbjlfhh.functions.supabase.co/notify-chat';
+
+  -- Construct the payload
+  payload := json_build_object(
+    'message_id', NEW.id,
+    'conversation_id', NEW.conversation_id,
+    'sender_id', NEW.sender_id,
+    'recipient_id', recipient_id,
+    'message_text', NEW.content,
+    'sender_name', sender_profile->>'full_name',
+    'conversation_data', conversation_data
   );
 
-  -- Get service key
-  service_key := get_service_key();
-
-  -- Call Edge Function to send FCM notification
-  SELECT
-    net.http_post(
-      url := 'https://jpsgjzprweboqnbjlfhh.supabase.co/functions/v1/notify-chat',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || service_key,
-        'x-edge-secret', 'edubazaar-secret-2024-xyz123'
-      ),
-      body := jsonb_build_object(
-        'type', 'message_inserted',
-        'message', jsonb_build_object(
-          'id', NEW.id,
-          'conversation_id', NEW.conversation_id,
-          'sender_id', NEW.sender_id,
-          'message_text', NEW.message_text
-        )
-      )
-    ) INTO response;
-
-  -- Log the response for debugging
-  INSERT INTO logs (event_type, details) VALUES (
-    'fcm_notification_sent',
-    jsonb_build_object(
-      'message_id', NEW.id,
-      'response', response,
-      'timestamp', NOW()
-    )
+  -- Construct the HTTP request
+  http_request := net.http_request(
+    'POST',                                -- method
+    edge_function_url,                     -- url
+    headers := jsonb_build_object(         -- headers
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || service_key
+    ),
+    body := payload::text                  -- body
   );
-  
+
+  -- Make the HTTP request
+  http_response := net.http_post(http_request);
+
+  -- Log the response
+  INSERT INTO logs (event_type, details) 
+  VALUES ('fcm_notification_sent', json_build_object(
+    'status_code', http_response.status,
+    'response_body', http_response.body::json,
+    'message_id', NEW.id
+  ));
+
+  RETURN NEW;
+
+EXCEPTION WHEN OTHERS THEN
+  -- Log any errors
+  INSERT INTO logs (event_type, details) 
+  VALUES ('notification_error', json_build_object('error', SQLERRM || ' | ' || SQLSTATE));
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Create trigger
 DROP TRIGGER IF EXISTS trigger_notify_chat_on_message ON public.messages;

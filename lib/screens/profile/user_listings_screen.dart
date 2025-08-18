@@ -69,17 +69,11 @@ class _UserListingsScreenState extends State<UserListingsScreen>
     setState(() => _isLoading = true);
 
     try {
-      print(
-          '🔍 Loading listings for user: ${widget.userId} (${widget.userName})');
-      print('🔍 Is current user: $_isCurrentUser');
-
       _allListings = await MarketplaceService.getUserListings(widget.userId);
-      print('✅ Loaded ${_allListings.length} listings for user');
 
       // Initialize view counts
       _initializeViewCounts();
     } catch (e) {
-      print('❌ Error loading user listings: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -286,7 +280,7 @@ class _UserListingsScreenState extends State<UserListingsScreen>
               color: AppTheme.primaryColor,
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to edit listing screen
+                // Edit listing feature to be implemented
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Edit functionality coming soon!'),
@@ -837,4 +831,3 @@ class _UserListingsScreenState extends State<UserListingsScreen>
     }
   }
 }
- 

@@ -32,8 +32,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   Future<void> _checkIfFavorited() async {
-    // TODO: Check if listing is favorited by current user
-    // For now, we'll implement this later
+    // Check if listing is favorited by current user
+    // Implementation to be added
   }
 
   Future<void> _toggleFavorite() async {
@@ -204,7 +204,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   child: IconButton(
                     icon: const Icon(Icons.share, color: Colors.black87),
                     onPressed: () {
-                      // TODO: Implement share functionality
+                      // Share functionality to be implemented
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(

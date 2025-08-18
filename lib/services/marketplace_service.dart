@@ -49,7 +49,6 @@ class MarketplaceService {
 
       return response['id'];
     } catch (e) {
-      print('Supabase error creating listing: $e');
       throw Exception('Failed to create listing: ${e.toString()}');
     }
   }
@@ -119,7 +118,6 @@ class MarketplaceService {
 
       return listings;
     } catch (e) {
-      print('Supabase error fetching listings: $e');
       throw Exception('Failed to fetch listings: ${e.toString()}');
     }
   }
@@ -140,7 +138,6 @@ class MarketplaceService {
 
       return Listing.fromJson(response);
     } catch (e) {
-      print('Error fetching listing: $e');
       return null;
     }
   }
@@ -237,7 +234,6 @@ class MarketplaceService {
 
       return response != null;
     } catch (e) {
-      print('Error checking favorite status: $e');
       return false;
     }
   }
@@ -266,7 +262,6 @@ class MarketplaceService {
   // Upload image to Supabase storage
   static Future<String> uploadImage(File imageFile) async {
     try {
-      print('📤 Starting image upload...');
       final currentUserId = _supabase.auth.currentUser?.id;
       if (currentUserId == null) {
         throw Exception('User must be logged in to upload images');
@@ -276,7 +271,6 @@ class MarketplaceService {
       final fileName = 'listing_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = '$currentUserId/$fileName';
 
-      print('🔄 Uploading to Supabase Storage: $filePath');
       await _supabase.storage.from('listing-images').uploadBinary(
           filePath, bytes,
           fileOptions: const FileOptions(upsert: true));
@@ -285,16 +279,11 @@ class MarketplaceService {
       final publicUrl =
           _supabase.storage.from('listing-images').getPublicUrl(filePath);
 
-      print('✅ Image uploaded successfully: $publicUrl');
       return publicUrl;
     } catch (e) {
-      print('Image upload failed: $e');
-
       // If storage bucket doesn't exist, return empty string
       if (e.toString().contains('bucket') ||
           e.toString().contains('not found')) {
-        print(
-            'Storage bucket not found, using empty string to show default placeholder');
         return '';
       }
 

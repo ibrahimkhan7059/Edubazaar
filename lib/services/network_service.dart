@@ -9,7 +9,6 @@ class NetworkService {
       // First check connectivity status
       final connectivityResult = await Connectivity().checkConnectivity();
       if (connectivityResult == ConnectivityResult.none) {
-        print('🌐 No connectivity detected');
         return false;
       }
 
@@ -18,14 +17,8 @@ class NetworkService {
           .timeout(const Duration(seconds: 5));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } on SocketException catch (e) {
-      print('🌐 SocketException: $e');
       return false;
     } catch (e) {
-      if (e.toString().contains('timeout')) {
-        print('🌐 TimeoutException: $e');
-      } else {
-        print('🌐 Unknown network error: $e');
-      }
       return false;
     }
   }
@@ -43,14 +36,8 @@ class NetworkService {
           response.statusCode ==
               401; // 401 means auth required, but server is reachable
     } on SocketException catch (e) {
-      print('❌ Supabase SocketException: $e');
       return false;
     } catch (e) {
-      if (e.toString().contains('timeout')) {
-        print('❌ Supabase TimeoutException: $e');
-      } else {
-        print('❌ Supabase connectivity check failed: $e');
-      }
       return false;
     }
   }
@@ -69,7 +56,6 @@ class NetworkService {
         'timestamp': DateTime.now().toIso8601String(),
       };
     } catch (e) {
-      print('❌ Error getting network status: $e');
       return {
         'connectivity': 'unknown',
         'hasInternet': false,
@@ -99,7 +85,6 @@ class NetworkService {
 
       return '✅ Network connection is working.';
     } catch (e) {
-      print('❌ Error getting network status message: $e');
       return '❓ Unable to determine network status.';
     }
   }
@@ -124,7 +109,7 @@ class NetworkService {
         return await operation();
       } catch (e) {
         attempts++;
-        print('❌ Attempt $attempts failed: $e');
+        // Attempt failed, retrying...
 
         if (attempts >= maxRetries) {
           rethrow;

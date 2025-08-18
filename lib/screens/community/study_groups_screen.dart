@@ -136,7 +136,7 @@ class _StudyGroupsScreenState extends State<StudyGroupsScreen>
     try {
       final groups = await CommunityService.getMyStudyGroups();
       if (!mounted) return;
-      
+
       setState(() {
         _myGroups = groups;
         _isLoadingMyGroups = false;
@@ -162,7 +162,7 @@ class _StudyGroupsScreenState extends State<StudyGroupsScreen>
     try {
       final groups = await CommunityService.getDiscoverStudyGroups();
       if (!mounted) return;
-      
+
       setState(() {
         _discoverGroups = groups;
         _isLoadingDiscoverGroups = false;

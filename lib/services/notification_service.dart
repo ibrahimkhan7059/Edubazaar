@@ -8,6 +8,7 @@ import '../screens/chat/chat_screen.dart';
 import '../screens/chat/chat_list_screen.dart';
 import 'auth_service.dart';
 import '../main.dart';
+import 'package:flutter/foundation.dart';
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -26,16 +27,14 @@ class NotificationService {
 
   /// Initialize notification settings
   static Future<void> initialize() async {
-    print('🚀 [NOTIFICATION] Starting notification service initialization...');
-
     try {
       // Request permissions first
-      print('🔧 [NOTIFICATION] Requesting notification permissions...');
       await requestPermission();
-      print('✅ [NOTIFICATION] Permission request completed');
+
+      // Check and update FCM token
+      await checkAndUpdateFCMToken();
 
       // Initialize local notifications
-      print('🔧 [NOTIFICATION] Initializing local notifications...');
       await _localNotifications.initialize(
         InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -46,20 +45,15 @@ class NotificationService {
           ),
         ),
         onDidReceiveNotificationResponse: (details) {
-          print(
-              '🔔 [NOTIFICATION] Notification tapped! Payload: ${details.payload}');
           _handleNotificationTap(details.payload);
         },
       );
-      print('✅ [NOTIFICATION] Local notifications initialized successfully');
 
       // Create Android notification channel
-      print('🔧 [NOTIFICATION] Creating Android notification channel...');
       await _localNotifications
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(_channel);
-      print('✅ [NOTIFICATION] Android channel created: ${_channel.id}');
 
       // Get and save FCM token
       final token = await getDeviceToken();
@@ -70,19 +64,14 @@ class NotificationService {
       // Listen for token refresh
       listenForTokenRefresh();
 
-      print(
-          '🎉 [NOTIFICATION] Notification service initialization completed successfully!');
+      // Notification service initialization completed successfully
     } catch (e) {
-      print('❌ [NOTIFICATION] Error during initialization: $e');
-      print('❌ [NOTIFICATION] Stack trace: ${StackTrace.current}');
       rethrow;
     }
   }
 
   /// Request notification permissions
   static Future<NotificationSettings> requestPermission() async {
-    print('🔐 [PERMISSION] Requesting FCM notification permissions...');
-
     NotificationSettings settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
@@ -90,16 +79,7 @@ class NotificationService {
       provisional: false,
     );
 
-    print(
-        '🔐 [PERMISSION] FCM permission result: ${settings.authorizationStatus}');
-    print('🔐 [PERMISSION] Alert: ${settings.alert}');
-    print('🔐 [PERMISSION] Badge: ${settings.badge}');
-    print('🔐 [PERMISSION] Sound: ${settings.sound}');
-
-    debugPrint('User granted permission: ${settings.authorizationStatus}');
-
     // Request permissions for local notifications on iOS
-    print('🔐 [PERMISSION] Requesting iOS local notification permissions...');
     await _localNotifications
         .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>()
@@ -108,25 +88,16 @@ class NotificationService {
           badge: true,
           sound: true,
         );
-    print('🔐 [PERMISSION] iOS local notification permissions requested');
 
     return settings;
   }
 
   /// Get the FCM device token
   static Future<String?> getDeviceToken() async {
-    print('🔑 [FCM] Requesting FCM device token...');
     try {
       final token = await _messaging.getToken();
-      if (token != null) {
-        print('✅ [FCM] FCM token received: ${token.substring(0, 30)}...');
-        print('🔑 [FCM] Full token length: ${token.length} characters');
-      } else {
-        print('❌ [FCM] FCM token is null');
-      }
       return token;
     } catch (e) {
-      print('❌ [FCM] Error getting FCM token: $e');
       return null;
     }
   }
@@ -159,7 +130,7 @@ class NotificationService {
         }
       }
     } catch (e) {
-      debugPrint('Error handling notification tap: $e');
+      // Error handling notification tap handled silently
     }
   }
 
@@ -169,11 +140,6 @@ class NotificationService {
     required String body,
     required String payload,
   }) async {
-    print('🔔 [NOTIFICATION] Starting local notification...');
-    print('🔔 [NOTIFICATION] Title: $title');
-    print('🔔 [NOTIFICATION] Body: $body');
-    print('🔔 [NOTIFICATION] Payload: $payload');
-
     try {
       final androidDetails = AndroidNotificationDetails(
         _channel.id,
@@ -195,13 +161,7 @@ class NotificationService {
         iOS: iOSDetails,
       );
 
-      print('🔔 [NOTIFICATION] Notification details created successfully');
-      print('🔔 [NOTIFICATION] Android channel: ${_channel.id}');
-      print(
-          '🔔 [NOTIFICATION] iOS details: presentAlert=${iOSDetails.presentAlert}');
-
       final notificationId = DateTime.now().millisecond;
-      print('🔔 [NOTIFICATION] Generated ID: $notificationId');
 
       await _localNotifications.show(
         notificationId,
@@ -211,16 +171,32 @@ class NotificationService {
         payload: payload,
       );
 
-      print('✅ [NOTIFICATION] Local notification sent successfully!');
-      print('✅ [NOTIFICATION] ID: $notificationId');
-      print('✅ [NOTIFICATION] Time: ${DateTime.now()}');
-
-      // Verify notification was actually shown
-      print('🔍 [NOTIFICATION] Verifying notification display...');
+      // Local notification sent successfully
     } catch (e) {
-      print('❌ [NOTIFICATION] Error showing local notification: $e');
-      print('❌ [NOTIFICATION] Stack trace: ${StackTrace.current}');
       rethrow;
+    }
+  }
+
+  /// Handles background messages
+  static Future<void> handleBackgroundMessage(RemoteMessage message) async {
+    if (message.notification != null) {
+      await showLocalNotification(
+        title: message.notification!.title ?? 'New Notification',
+        body: message.notification!.body ?? 'You have a new notification',
+        payload: message.data.isNotEmpty ? message.data.toString() : '{}',
+      );
+    }
+  }
+
+  /// Logs errors to your error reporting service
+  static void logError(dynamic error, StackTrace? stackTrace) {
+    // TODO: Implement proper error reporting service
+    // For now, just print to console in debug mode
+    if (kDebugMode) {
+      print('Error: $error');
+      if (stackTrace != null) {
+        print('Stack trace: $stackTrace');
+      }
     }
   }
 
@@ -252,9 +228,9 @@ class NotificationService {
           .from('chat_notifications')
           .update({'is_read': true}).eq('id', notificationId);
 
-      print('✅ Notification marked as read: $notificationId');
+      // Notification marked as read successfully
     } catch (e) {
-      print('❌ Error marking notification as read: $e');
+      // Error marking notification as read handled silently
     }
   }
 
@@ -272,24 +248,17 @@ class NotificationService {
 
       return (response as List).length;
     } catch (e) {
-      print('❌ Error getting unread count: $e');
       return 0;
     }
   }
 
   /// Save FCM token to Supabase
   static Future<void> saveFCMTokenToSupabase(String token) async {
-    print('💾 [FCM] Starting to save FCM token to Supabase...');
-    print('💾 [FCM] Token to save: ${token.substring(0, 30)}...');
-
     try {
       final userId = AuthService.getCurrentUserId();
       if (userId == null) {
-        print('❌ [FCM] No user ID found for FCM token');
         return;
       }
-
-      print('💾 [FCM] User ID: $userId');
 
       // Delete any old tokens for this user first
       await Supabase.instance.client
@@ -297,7 +266,11 @@ class NotificationService {
           .delete()
           .eq('user_id', userId);
 
-      print('🗑️ [FCM] Deleted old tokens');
+      // Delete any old tokens for this user first
+      await Supabase.instance.client
+          .from('user_fcm_tokens')
+          .delete()
+          .eq('user_id', userId);
 
       // Insert new token
       await Supabase.instance.client.from('user_fcm_tokens').insert({
@@ -308,8 +281,6 @@ class NotificationService {
         'updated_at': DateTime.now().toIso8601String(),
       });
 
-      print('✅ [FCM] FCM token saved to Supabase successfully!');
-
       // Verify the token was saved
       final savedToken = await Supabase.instance.client
           .from('user_fcm_tokens')
@@ -319,10 +290,8 @@ class NotificationService {
           .single();
 
       if (savedToken != null) {
-        print('✅ [FCM] Token verification successful');
+        // Token verification successful
       } else {
-        print(
-            '⚠️ [FCM] Token verification failed - token not found in database');
         // Try saving again
         await Supabase.instance.client.from('user_fcm_tokens').insert({
           'user_id': userId,
@@ -333,8 +302,6 @@ class NotificationService {
         });
       }
     } catch (e) {
-      print('❌ [FCM] Exception saving FCM token: $e');
-      print('❌ [FCM] Stack trace: ${StackTrace.current}');
       rethrow;
     }
   }
@@ -342,19 +309,15 @@ class NotificationService {
   /// Listen for token refresh
   static void listenForTokenRefresh() {
     _messaging.onTokenRefresh.listen((token) async {
-      print('🔄 FCM token refreshed, saving to Supabase...');
       await saveFCMTokenToSupabase(token);
     });
   }
 
   /// Check for missed notifications when app launches
   static Future<void> checkMissedNotifications() async {
-    print('🔍 [NOTIFICATION] Checking for missed notifications...');
-
     try {
       final userId = AuthService.getCurrentUserId();
       if (userId == null) {
-        print('❌ [NOTIFICATION] No user ID found for checking notifications');
         return;
       }
 
@@ -373,9 +336,6 @@ class NotificationService {
 
       final notifications = response as List;
       if (notifications.isNotEmpty) {
-        print(
-            '✅ [NOTIFICATION] Found ${notifications.length} unread notifications');
-
         // Show summary notification if there are unread notifications
         if (notifications.length > 1) {
           await showLocalNotification(
@@ -393,11 +353,41 @@ class NotificationService {
             payload: notification['data']?.toString() ?? '{}',
           );
         }
-      } else {
-        print('ℹ️ [NOTIFICATION] No missed notifications found');
       }
     } catch (e) {
-      print('❌ [NOTIFICATION] Error checking missed notifications: $e');
+      // Error checking missed notifications handled silently
+    }
+  }
+
+  /// Check FCM token status and re-register if needed
+  static Future<void> checkAndUpdateFCMToken() async {
+    try {
+      final userId = AuthService.getCurrentUserId();
+      if (userId == null) {
+        return;
+      }
+
+      // Check if token exists in database
+      final existingToken = await Supabase.instance.client
+          .from('user_fcm_tokens')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (existingToken == null) {
+        final newToken = await getDeviceToken();
+        if (newToken != null) {
+          await saveFCMTokenToSupabase(newToken);
+        }
+      } else {
+        // Verify token is still valid with Firebase
+        final currentToken = await getDeviceToken();
+        if (currentToken != existingToken['fcm_token']) {
+          await saveFCMTokenToSupabase(currentToken!);
+        }
+      }
+    } catch (e) {
+      // Error checking FCM token status handled silently
     }
   }
 }

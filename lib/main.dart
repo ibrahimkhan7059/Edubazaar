@@ -12,39 +12,24 @@ import 'screens/notifications/notification_test_screen.dart';
 import 'config/supabase_config.dart';
 import 'services/notification_service.dart';
 import 'firebase_options.dart';
+import 'screens/auth/reset_password_screen.dart';
 
 // Global navigator key for navigation from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // Background message handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('🔔 [BACKGROUND] Starting background message handler...');
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  print('✅ [BACKGROUND] Firebase initialized for background message');
-  print('🔔 [BACKGROUND] Handling background message: ${message.messageId}');
-  print('🔔 [BACKGROUND] Message data: ${message.data}');
-  print('🔔 [BACKGROUND] Message notification: ${message.notification?.title}');
 
-  // Handle notification data
   if (message.data.isNotEmpty) {
-    print('🔔 [BACKGROUND] Processing message data: ${message.data}');
-
-    // You can add custom logic here for background notifications
-    // For example, updating local storage, showing local notifications, etc.
-
-    print('✅ [BACKGROUND] Background message processed successfully');
-  } else {
-    print('⚠️ [BACKGROUND] No message data to process');
+    // Handle background notification data
+    await NotificationService.handleBackgroundMessage(message);
   }
-
-  print('🏁 [BACKGROUND] Background message handler completed');
 }
 
 void main() async {
-  // Ensure all errors are caught and don't crash the app
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
@@ -54,34 +39,27 @@ void main() async {
     // Handle app lifecycle to maintain status bar colors
     SystemChannels.platform.setMethodCallHandler((call) async {
       if (call.method == 'SystemChrome.setSystemUIOverlayStyle') {
-        // Maintain our custom status bar colors
         SystemChrome.setSystemUIOverlayStyle(AppTheme.systemUiOverlayStyle);
       }
     });
 
     // Handle platform channel errors globally
     FlutterError.onError = (FlutterErrorDetails details) {
-      print('Flutter Error: ${details.exception}');
-      print('Stack trace: ${details.stack}');
+      // Log error to your error reporting service
+      NotificationService.logError(details.exception, details.stack);
     };
 
     try {
-      // Initialize Supabase first
-      await Supabase.initialize(
-        url: SupabaseConfig.supabaseUrl,
-        anonKey: SupabaseConfig.supabaseAnonKey,
-      );
-      print('✅ Supabase initialized successfully');
+      // Initialize Supabase
+      await SupabaseConfig.initialize();
 
-      // Initialize Firebase with proper options
+      // Initialize Firebase
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      print('✅ Firebase initialized successfully');
 
       // Initialize notification service
       await NotificationService.initialize();
-      print('✅ Notification service initialized successfully');
 
       // Set up background message handler
       FirebaseMessaging.onBackgroundMessage(
@@ -89,39 +67,21 @@ void main() async {
 
       // Set up foreground message handler
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print('🔔 [FOREGROUND] Got a message whilst in the foreground!');
-        print('🔔 [FOREGROUND] Message ID: ${message.messageId}');
-        print('🔔 [FOREGROUND] Message data: ${message.data}');
-        print(
-            '🔔 [FOREGROUND] Message notification: ${message.notification?.title}');
-
         if (message.notification != null) {
-          print('🔔 [FOREGROUND] Processing notification...');
-          print('🔔 [FOREGROUND] Title: ${message.notification!.title}');
-          print('🔔 [FOREGROUND] Body: ${message.notification!.body}');
-
-          // Show local notification
           NotificationService.showLocalNotification(
             title: message.notification!.title ?? 'New Notification',
             body: message.notification!.body ?? 'You have a new notification',
             payload: message.data.isNotEmpty ? message.data.toString() : '{}',
           );
-          print(
-              '✅ [FOREGROUND] Local notification triggered from foreground message');
-        } else {
-          print('⚠️ [FOREGROUND] Message has no notification');
         }
       });
 
-      // Check for missed notifications after all initializations
+      // Check for missed notifications
       await NotificationService.checkMissedNotifications();
-      print('✅ Checked for missed notifications');
 
       runApp(const MyApp());
     } catch (e, stackTrace) {
-      print('❌ Error during app initialization: $e');
-      print('Stack trace: $stackTrace');
-      // Show error UI or handle gracefully
+      NotificationService.logError(e, stackTrace);
       runApp(
         MaterialApp(
           home: Scaffold(
@@ -133,13 +93,82 @@ void main() async {
       );
     }
   }, (error, stackTrace) {
-    print('❌ Uncaught error: $error');
-    print('Stack trace: $stackTrace');
+    NotificationService.logError(error, stackTrace);
   });
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Listen for auth state changes
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+
+      if (event == AuthChangeEvent.passwordRecovery) {
+        _handlePasswordRecovery();
+      }
+    });
+
+    // Check initial deep link
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkInitialAuthState();
+    });
+  }
+
+  void _handlePasswordRecovery() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // Use Future.delayed to ensure the context is ready
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!mounted) return;
+
+        try {
+          Navigator.of(navigatorKey.currentContext!).pushNamedAndRemoveUntil(
+            '/reset-password',
+            (route) => false,
+          );
+        } catch (e, stackTrace) {
+          NotificationService.logError(e, stackTrace);
+        }
+      });
+    });
+  }
+
+  Future<void> _checkInitialAuthState() async {
+    try {
+      final session = await Supabase.instance.client.auth.currentSession;
+
+      if (session != null) {
+        final event =
+            await Supabase.instance.client.auth.onAuthStateChange.first;
+
+        if (event.event == AuthChangeEvent.passwordRecovery) {
+          _handlePasswordRecovery();
+        }
+      }
+    } catch (e, stackTrace) {
+      NotificationService.logError(e, stackTrace);
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,8 +187,8 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
         '/notification-test': (context) => const NotificationTestScreen(),
+        '/reset-password': (context) => const ResetPasswordScreen(),
       },
-      // Handle navigation errors
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
           builder: (context) => const LoginScreen(),

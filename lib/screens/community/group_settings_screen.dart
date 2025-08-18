@@ -68,12 +68,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     _isPrivate = widget.group.isPrivate ?? false;
     _selectedTags = List<String>.from(widget.group.tags ?? []);
 
-    // Debug information
-    print('🔍 Group Settings - Initializing form');
-    print('🔍 Group name: ${widget.group.name}');
-    print('🔍 Group tags: ${widget.group.tags}');
-    print('🔍 Selected tags: $_selectedTags');
-    print('🔍 Available tags count: ${_availableTags.length}');
+    // Initialize form with group data
   }
 
   @override
@@ -173,13 +168,11 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         _error = null;
       });
 
-      print('🗑️ [GROUP] Starting to delete group: ${widget.group.id}');
       final success = await CommunityService.deleteStudyGroup(widget.group.id);
 
       if (!mounted) return;
 
       if (success) {
-        print('✅ [GROUP] Group deleted successfully');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Group deleted successfully!'),
@@ -191,14 +184,12 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         Navigator.of(context).pop(); // Pop settings screen
         Navigator.of(context).pop(); // Pop group detail screen
       } else {
-        print('❌ [GROUP] Failed to delete group');
         setState(() {
           _error = 'Failed to delete group. Please try again.';
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('❌ [GROUP] Error deleting group: $e');
       if (!mounted) return;
 
       setState(() {
@@ -516,24 +507,6 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
           style: TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 12),
-
-        // Debug info
-        if (_selectedTags.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue[200]!),
-            ),
-            child: Text(
-              'Selected tags: ${_selectedTags.join(', ')}',
-              style: TextStyle(color: Colors.blue[700], fontSize: 12),
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(

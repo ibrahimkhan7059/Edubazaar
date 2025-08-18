@@ -9,10 +9,12 @@ class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
 
   @override
-  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+  State<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+class _NotificationSettingsScreenState
+    extends State<NotificationSettingsScreen> {
   bool _isLoading = true;
   bool _pushNotificationsEnabled = true;
   bool _localNotificationsEnabled = true;
@@ -49,8 +51,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           _pushNotificationsEnabled = response['push_notifications'] ?? true;
           _localNotificationsEnabled = response['local_notifications'] ?? true;
           _chatNotificationsEnabled = response['chat_notifications'] ?? true;
-          _marketplaceNotificationsEnabled = response['marketplace_notifications'] ?? true;
-          _communityNotificationsEnabled = response['community_notifications'] ?? true;
+          _marketplaceNotificationsEnabled =
+              response['marketplace_notifications'] ?? true;
+          _communityNotificationsEnabled =
+              response['community_notifications'] ?? true;
           _emailNotificationsEnabled = response['email_notifications'] ?? false;
           _soundEnabled = response['sound_enabled'] ?? true;
           _vibrationEnabled = response['vibration_enabled'] ?? true;
@@ -60,7 +64,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         });
       }
     } catch (e) {
-      print('Error loading notification settings: $e');
+      // Error loading notification settings handled silently
     } finally {
       setState(() {
         _isLoading = false;
@@ -73,9 +77,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       final userId = AuthService.getCurrentUserId();
       if (userId == null) return;
 
-      await Supabase.instance.client
-          .from('user_notification_settings')
-          .upsert({
+      await Supabase.instance.client.from('user_notification_settings').upsert({
         'user_id': userId,
         'push_notifications': _pushNotificationsEnabled,
         'local_notifications': _localNotificationsEnabled,
@@ -181,11 +183,13 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         title: 'Local Notifications',
                         subtitle: 'Show notifications when app is open',
                         value: _localNotificationsEnabled,
-                        onChanged: _pushNotificationsEnabled ? (value) {
-                          setState(() {
-                            _localNotificationsEnabled = value;
-                          });
-                        } : null,
+                        onChanged: _pushNotificationsEnabled
+                            ? (value) {
+                                setState(() {
+                                  _localNotificationsEnabled = value;
+                                });
+                              }
+                            : null,
                       ),
                       _buildSwitchTile(
                         title: 'Sound',
@@ -322,7 +326,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      icon: const Icon(Icons.notifications, color: Colors.white),
+                      icon:
+                          const Icon(Icons.notifications, color: Colors.white),
                       label: Text(
                         'Test Notification',
                         style: GoogleFonts.poppins(
@@ -456,7 +461,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               initialTime: _parseTimeString(time),
             );
             if (picked != null) {
-              onTimeChanged('${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+              onTimeChanged(
+                  '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
             }
           },
           child: Container(
@@ -488,4 +494,4 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       minute: int.parse(parts[1]),
     );
   }
-} 
+}

@@ -39,7 +39,6 @@ class _UserFavouritesScreenState extends State<UserFavouritesScreen> {
       // Initialize view counts
       _initializeViewCounts();
     } catch (e) {
-      print('Error loading favourite listings: $e');
       setState(() => _isLoading = false);
 
       if (mounted) {
@@ -378,7 +377,7 @@ class _UserFavouritesScreenState extends State<UserFavouritesScreen> {
                     _favouriteListings.add(listing);
                   });
                 } catch (e) {
-                  print('Error undoing favourite removal: $e');
+                  // Error undoing favourite removal handled silently
                 }
               },
             ),
@@ -386,7 +385,6 @@ class _UserFavouritesScreenState extends State<UserFavouritesScreen> {
         );
       }
     } catch (e) {
-      print('Error removing from favourites: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

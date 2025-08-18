@@ -132,7 +132,7 @@ class _ForumTopicDetailScreenState extends State<ForumTopicDetailScreen> {
         _replies = replies;
       });
     } catch (e) {
-      print('Error loading replies: $e');
+      // Error loading replies handled silently
     }
   }
 

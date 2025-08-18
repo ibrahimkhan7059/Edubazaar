@@ -123,9 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _isStatusLoading = false;
         });
       }
-      print('🔄 Status loaded: $_currentStatus');
     } catch (e) {
-      print('❌ Error loading user status: $e');
       if (mounted) {
         setState(() {
           _currentStatus = 'Last seen unknown';

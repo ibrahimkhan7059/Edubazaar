@@ -37,7 +37,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
         _isAdmin = isAdmin;
       });
     } catch (e) {
-      print('Error checking admin status: $e');
+      // Error checking admin status handled silently
     }
   }
 
@@ -63,6 +63,23 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
         );
       }
     }
+  }
+
+  // Helper method to get profile image URL from member data
+  String? _getProfileImageUrl(Map<String, dynamic> member) {
+    final profilePicUrl = member['profilePicUrl'] ?? member['profile_pic_url'];
+    if (profilePicUrl != null && profilePicUrl.toString().isNotEmpty) {
+      return profilePicUrl.toString();
+    }
+    return null;
+  }
+
+  // Helper method to get first letter of name for default avatar
+  String _getFirstLetter(dynamic name) {
+    if (name != null && name.toString().isNotEmpty) {
+      return name.toString().substring(0, 1).toUpperCase();
+    }
+    return 'U';
   }
 
   Future<void> _removeMember(String memberId, String memberName) async {
@@ -114,11 +131,14 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text('Group Members'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.surfaceColor,
+        foregroundColor: AppTheme.textPrimary,
         systemOverlayStyle: AppTheme.systemUiOverlayStyle,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
         actions: [
           if (_isAdmin)
             IconButton(
@@ -168,18 +188,18 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: member['profile_pic_url'] != null
-                              ? NetworkImage(member['profile_pic_url'])
+                          radius: 20,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: _getProfileImageUrl(member) != null
+                              ? NetworkImage(_getProfileImageUrl(member)!)
                               : null,
-                          child: member['profile_pic_url'] == null
+                          child: _getProfileImageUrl(member) == null
                               ? Text(
-                                  member['name']
-                                          ?.substring(0, 1)
-                                          .toUpperCase() ??
-                                      'U',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  _getFirstLetter(member['name']),
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
                                 )
                               : null,
@@ -257,6 +277,11 @@ class _AddMembersScreenState extends State<AddMembersScreen> {
   List<Map<String, dynamic>> _selectedUsers = [];
   bool _isSearching = false;
   bool _isAdding = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -352,14 +377,34 @@ class _AddMembersScreenState extends State<AddMembersScreen> {
     }
   }
 
+  // Helper method to get profile image URL from user data
+  String? _getProfileImageUrl(Map<String, dynamic> user) {
+    final profilePicUrl = user['profilePicUrl'] ?? user['profile_pic_url'];
+    if (profilePicUrl != null && profilePicUrl.toString().isNotEmpty) {
+      return profilePicUrl.toString();
+    }
+    return null;
+  }
+
+  // Helper method to get first letter of name for default avatar
+  String _getFirstLetter(dynamic name) {
+    if (name != null && name.toString().isNotEmpty) {
+      return name.toString().substring(0, 1).toUpperCase();
+    }
+    return 'U';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text('Add Members'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.surfaceColor,
+        foregroundColor: AppTheme.textPrimary,
         systemOverlayStyle: AppTheme.systemUiOverlayStyle,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
         actions: [
           if (_selectedUsers.isNotEmpty)
             TextButton(
@@ -443,16 +488,18 @@ class _AddMembersScreenState extends State<AddMembersScreen> {
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: user['profile_pic_url'] != null
-                              ? NetworkImage(user['profile_pic_url'])
+                          radius: 20,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: _getProfileImageUrl(user) != null
+                              ? NetworkImage(_getProfileImageUrl(user)!)
                               : null,
-                          child: user['profile_pic_url'] == null
+                          child: _getProfileImageUrl(user) == null
                               ? Text(
-                                  user['name']?.substring(0, 1).toUpperCase() ??
-                                      'U',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  _getFirstLetter(user['name']),
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
                                 )
                               : null,

@@ -16,27 +16,18 @@ class ProfileService {
   /// Get user profile with real-time stats
   static Future<UserProfile?> getUserProfile(String userId) async {
     try {
-      print('🔍 Getting user profile for: $userId');
-
       // First ensure the profile exists in the database
-      print('📝 Ensuring profile exists...');
       await AuthService.ensureUserProfileExists();
-      print('✅ Profile existence check completed');
 
       // Get basic profile data
-      print('📊 Fetching basic profile data...');
       final basicResponse = await _supabase
           .from('user_profiles')
           .select()
           .eq('id', userId)
           .single();
 
-      print('✅ Basic profile fetched successfully');
-
       // Calculate real-time statistics
-      print('📈 Calculating real-time statistics...');
       final stats = await _calculateUserStats(userId);
-      print('✅ Real-time statistics calculated');
 
       // Combine profile data with real-time stats
       final profileData = Map<String, dynamic>.from(basicResponse);
@@ -44,8 +35,6 @@ class ProfileService {
 
       return UserProfile.fromJson(profileData);
     } catch (e) {
-      print('❌ Error fetching user profile: $e');
-      print('❌ Error type: ${e.runtimeType}');
       return null;
     }
   }
@@ -53,8 +42,6 @@ class ProfileService {
   /// Calculate real-time user statistics from database
   static Future<Map<String, dynamic>> _calculateUserStats(String userId) async {
     try {
-      print('🔢 Calculating real-time stats for user: $userId');
-
       // Initialize stats
       Map<String, dynamic> stats = {
         'total_listings': 0,
@@ -111,10 +98,8 @@ class ProfileService {
       stats['total_sales'] = futures[2] as int;
       stats['total_purchases'] = futures[3] as int;
 
-      print('✅ Stats calculated: ${stats.toString()}');
       return stats;
     } catch (e) {
-      print('❌ Error calculating user stats: $e');
       // Return default stats on error
       return {
         'total_listings': 0,
@@ -140,7 +125,6 @@ class ProfileService {
       return result.length;
     } catch (e) {
       // Table might not exist yet
-      print('ℹ️ Transactions table not available: $e');
       return 0;
     }
   }
@@ -159,7 +143,6 @@ class ProfileService {
 
       await _supabase.from('user_profiles').insert(profileData);
     } catch (e) {
-      print('Error creating initial profile: $e');
       // Don't throw error - profile creation is optional
     }
   }
@@ -172,7 +155,6 @@ class ProfileService {
 
       return await getUserProfile(user.id);
     } catch (e) {
-      print('Error fetching current user profile: $e');
       return null;
     }
   }
@@ -188,7 +170,6 @@ class ProfileService {
 
       return UserProfile.fromJson(response);
     } catch (e) {
-      print('Error creating/updating profile: $e');
       throw Exception('Failed to update profile: $e');
     }
   }
@@ -196,8 +177,6 @@ class ProfileService {
   /// Update profile picture (with old image cleanup)
   static Future<String?> uploadProfilePicture(String userId, File file) async {
     try {
-      print('📤 Uploading profile picture for user: $userId');
-
       // First, get current profile picture URL to delete old image
       String? oldImageUrl;
       try {
@@ -208,9 +187,8 @@ class ProfileService {
             .maybeSingle();
 
         oldImageUrl = currentProfile?['profile_pic_url'] as String?;
-        print('🔍 Current profile image URL: $oldImageUrl');
       } catch (e) {
-        print('⚠️ Could not fetch current profile image: $e');
+        // Could not fetch current profile image
       }
 
       // Try Supabase Storage first, fallback to local storage if bucket doesn't exist
@@ -219,7 +197,6 @@ class ProfileService {
         final fileName =
             '$userId/profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-        print('🔄 Attempting to upload to Supabase Storage...');
         await _supabase.storage.from('profile-pictures').uploadBinary(
             fileName, bytes,
             fileOptions: const FileOptions(upsert: true));
@@ -239,11 +216,9 @@ class ProfileService {
           await _deleteOldSupabaseImage(oldImageUrl);
         }
 
-        print('✅ Profile picture uploaded to Supabase Storage: $publicUrl');
         return publicUrl;
       } catch (storageError) {
-        print('⚠️ Supabase Storage failed: $storageError');
-        print('🔄 Falling back to local storage...');
+        // Supabase Storage failed, falling back to local storage
 
         // Fallback to local storage
         final appDir = Directory.systemTemp;
@@ -266,11 +241,9 @@ class ProfileService {
             .from('user_profiles')
             .update({'profile_pic_url': localFile.path}).eq('id', userId);
 
-        print('✅ Profile picture stored locally: ${localFile.path}');
         return localFile.path;
       }
     } catch (e) {
-      print('❌ Error uploading profile picture: $e');
       throw Exception('Failed to upload profile picture: $e');
     }
   }
@@ -278,8 +251,6 @@ class ProfileService {
   /// Delete profile picture (when user removes it)
   static Future<void> deleteProfilePicture(String userId) async {
     try {
-      print('🗑️ Deleting profile picture for user: $userId');
-
       // First, get current profile picture URL to delete the file
       String? currentImageUrl;
       try {
@@ -290,9 +261,8 @@ class ProfileService {
             .maybeSingle();
 
         currentImageUrl = currentProfile?['profile_pic_url'] as String?;
-        print('🔍 Current profile image URL to delete: $currentImageUrl');
       } catch (e) {
-        print('⚠️ Could not fetch current profile image: $e');
+        // Could not fetch current profile image
       }
 
       // Update database to remove profile picture URL
@@ -311,9 +281,8 @@ class ProfileService {
         }
       }
 
-      print('✅ Profile picture deleted successfully');
+      // Profile picture deleted successfully
     } catch (e) {
-      print('❌ Error deleting profile picture: $e');
       throw Exception('Failed to delete profile picture: $e');
     }
   }
@@ -329,13 +298,10 @@ class ProfileService {
       final bucketIndex = pathSegments.indexOf('profile-pictures');
       if (bucketIndex != -1 && bucketIndex < pathSegments.length - 1) {
         final filePath = pathSegments.sublist(bucketIndex + 1).join('/');
-        print('🗑️ Deleting old Supabase image: $filePath');
 
         await _supabase.storage.from('profile-pictures').remove([filePath]);
-        print('✅ Old Supabase image deleted successfully');
       }
     } catch (e) {
-      print('⚠️ Could not delete old Supabase image: $e');
       // Don't throw error - image upload was successful
     }
   }
@@ -346,10 +312,8 @@ class ProfileService {
       final oldFile = File(imagePath);
       if (await oldFile.exists()) {
         await oldFile.delete();
-        print('✅ Old local image deleted: $imagePath');
       }
     } catch (e) {
-      print('⚠️ Could not delete old local image: $e');
       // Don't throw error - image upload was successful
     }
   }
@@ -357,8 +321,6 @@ class ProfileService {
   /// Update cover photo
   static Future<String?> uploadCoverPhoto(String userId, File file) async {
     try {
-      print('📤 Uploading cover photo for user: $userId');
-
       // For now, we'll store locally and return a local file path
       // This allows immediate UI update without needing Supabase storage setup
       final appDir = Directory.systemTemp;
@@ -374,7 +336,6 @@ class ProfileService {
           .from('user_profiles')
           .update({'cover_photo_url': localFile.path}).eq('id', userId);
 
-      print('✅ Cover photo uploaded successfully: ${localFile.path}');
       return localFile.path;
 
       /* Future Supabase Storage implementation:
@@ -396,7 +357,6 @@ class ProfileService {
       return publicUrl;
       */
     } catch (e) {
-      print('❌ Error uploading cover photo: $e');
       throw Exception('Failed to upload cover photo: $e');
     }
   }
@@ -405,7 +365,6 @@ class ProfileService {
   static Future<void> updateLastActive(String userId) async {
     try {
       // Temporarily disabled to avoid URL errors
-      print('Update last active temporarily disabled');
       return;
 
       /* Original code - temporarily commented out
@@ -413,7 +372,7 @@ class ProfileService {
           .rpc('update_user_last_active', params: {'user_uuid': userId});
       */
     } catch (e) {
-      print('Error updating last active: $e');
+      // Error updating last active handled silently
     }
   }
 
@@ -431,7 +390,6 @@ class ProfileService {
           .map<UserProfile>((json) => UserProfile.fromJson(json))
           .toList();
     } catch (e) {
-      print('Error searching users: $e');
       return [];
     }
   }
@@ -469,7 +427,6 @@ class ProfileService {
         return UserReview.fromJson(flatJson);
       }).toList();
     } catch (e) {
-      print('Error fetching user reviews: $e');
       return [];
     }
   }
@@ -502,7 +459,6 @@ class ProfileService {
         return UserReview.fromJson(flatJson);
       }).toList();
     } catch (e) {
-      print('Error fetching reviews by user: $e');
       return [];
     }
   }
@@ -534,7 +490,6 @@ class ProfileService {
 
       return UserReview.fromJson(response);
     } catch (e) {
-      print('Error creating review: $e');
       throw Exception('Failed to create review: $e');
     }
   }
@@ -561,7 +516,6 @@ class ProfileService {
 
       return UserReview.fromJson(response);
     } catch (e) {
-      print('Error updating review: $e');
       throw Exception('Failed to update review: $e');
     }
   }
@@ -571,7 +525,6 @@ class ProfileService {
     try {
       await _supabase.from('user_reviews').delete().eq('id', reviewId);
     } catch (e) {
-      print('Error deleting review: $e');
       throw Exception('Failed to delete review: $e');
     }
   }
@@ -616,7 +569,6 @@ class ProfileService {
         return UserTransaction.fromJson(flatJson);
       }).toList();
     } catch (e) {
-      print('Error fetching user transactions: $e');
       return [];
     }
   }
@@ -652,7 +604,6 @@ class ProfileService {
         return UserTransaction.fromJson(flatJson);
       }).toList();
     } catch (e) {
-      print('Error fetching user sales: $e');
       return [];
     }
   }
@@ -688,7 +639,6 @@ class ProfileService {
         return UserTransaction.fromJson(flatJson);
       }).toList();
     } catch (e) {
-      print('Error fetching user purchases: $e');
       return [];
     }
   }
@@ -718,7 +668,6 @@ class ProfileService {
 
       return UserTransaction.fromJson(response);
     } catch (e) {
-      print('Error creating transaction: $e');
       throw Exception('Failed to create transaction: $e');
     }
   }
@@ -738,7 +687,6 @@ class ProfileService {
 
       return UserTransaction.fromJson(response);
     } catch (e) {
-      print('Error updating transaction status: $e');
       throw Exception('Failed to update transaction status: $e');
     }
   }
@@ -759,7 +707,6 @@ class ProfileService {
           .map<String>((json) => json['listing_id'] as String)
           .toList();
     } catch (e) {
-      print('Error fetching user favorites: $e');
       return [];
     }
   }
@@ -772,7 +719,6 @@ class ProfileService {
         'listing_id': listingId,
       });
     } catch (e) {
-      print('Error adding to favorites: $e');
       throw Exception('Failed to add to favorites: $e');
     }
   }
@@ -787,7 +733,6 @@ class ProfileService {
           .eq('user_id', userId)
           .eq('listing_id', listingId);
     } catch (e) {
-      print('Error removing from favorites: $e');
       throw Exception('Failed to remove from favorites: $e');
     }
   }
@@ -804,7 +749,6 @@ class ProfileService {
 
       return response != null;
     } catch (e) {
-      print('Error checking if favorited: $e');
       return false;
     }
   }
@@ -819,16 +763,11 @@ class ProfileService {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      print('📱 Saving FCM token for user: ${user.id}');
-
       await _supabase.from('user_profiles').update({
         'fcm_token': fcmToken,
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', user.id);
-
-      print('✅ FCM token saved successfully');
     } catch (e) {
-      print('❌ Error saving FCM token: $e');
       throw Exception('Failed to save FCM token: $e');
     }
   }
@@ -844,7 +783,6 @@ class ProfileService {
 
       return response?['fcm_token'] as String?;
     } catch (e) {
-      print('❌ Error getting FCM token: $e');
       return null;
     }
   }
@@ -862,7 +800,6 @@ class ProfileService {
           .where((token) => token.isNotEmpty)
           .toList();
     } catch (e) {
-      print('❌ Error getting FCM tokens: $e');
       return [];
     }
   }
@@ -881,7 +818,6 @@ class ProfileService {
       }
       return null;
     } catch (e) {
-      print('❌ Error fetching user last active: $e');
       return null;
     }
   }
@@ -914,9 +850,9 @@ class ProfileService {
         'update_user_last_active',
         params: {'user_id': user.id},
       );
-      print('✅ Updated user last active time');
+      // Updated user last active time
     } catch (e) {
-      print('❌ Error updating user last active: $e');
+      // Error updating user last active handled silently
     }
   }
 
@@ -933,7 +869,6 @@ class ProfileService {
       }
       return 'Last seen unknown';
     } catch (e) {
-      print('❌ Error getting user last active status: $e');
       return 'Last seen unknown';
     }
   }
@@ -952,7 +887,6 @@ class ProfileService {
       }
       return null;
     } catch (e) {
-      print('❌ Error getting user last active time: $e');
       return null;
     }
   }

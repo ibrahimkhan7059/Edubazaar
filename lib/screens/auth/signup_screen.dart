@@ -83,31 +83,25 @@ class _SignUpScreenState extends State<SignUpScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Additional client-side validation
       final email = _emailController.text.trim();
       final password = _passwordController.text;
       final name = _nameController.text.trim();
 
-      // Validate email format
       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
         throw Exception('Please enter a valid email address');
       }
 
-      // Validate password strength
       if (password.length < 6) {
         throw Exception('Password must be at least 6 characters long');
       }
 
-      // Validate name
       if (name.length < 2) {
         throw Exception('Name must be at least 2 characters long');
       }
 
-      // Perform signup
       final response = await AuthService.signUpWithEmail(email, password, name);
 
       if (mounted) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -119,12 +113,10 @@ class _SignUpScreenState extends State<SignUpScreen>
           ),
         );
 
-        // Navigate to home screen
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
       if (mounted) {
-        // Extract user-friendly error message
         String errorMessage = e.toString();
         if (errorMessage.startsWith('Exception: ')) {
           errorMessage = errorMessage.substring(11);
@@ -180,23 +172,12 @@ class _SignUpScreenState extends State<SignUpScreen>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 20),
-
-                    // Header
                     _buildHeader(),
-
                     const SizedBox(height: 30),
-
-                    // Sign Up Form
                     _buildSignUpForm(),
-
                     const SizedBox(height: 20),
-
-                    // Social Login
                     _buildSocialLogin(),
-
                     const SizedBox(height: 20),
-
-                    // Sign In Link
                     _buildSignInLink(),
                   ],
                 ),
@@ -609,4 +590,3 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 }
- 

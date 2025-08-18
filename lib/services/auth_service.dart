@@ -5,14 +5,14 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'welcome_email_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   static final SupabaseClient _supabase = Supabase.instance.client;
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    // Completely remove serverClientId - this often fixes token issues
-    hostedDomain: '',
-    signInOption: SignInOption.standard,
+    clientId: '159821446914-0rl4dgg8rl1g36vg4gnss90mc3ghhksa.apps.googleusercontent.com',
   );
 
   /// Get current user ID
@@ -49,7 +49,6 @@ class AuthService {
         anonKey: supabaseAnonKey,
       );
     } catch (e) {
-      print('Supabase initialization failed: $e');
       rethrow;
     }
   }
@@ -99,10 +98,25 @@ class AuthService {
         await _createUserProfile(response.user!, fullName);
       } catch (e) {
         // Profile creation failed - this is critical for the app to work
-        print(
-            '❌ Critical: Profile creation failed during sign up: ${e.toString()}');
         // Don't throw here as user account was created successfully
         // The profile will be created when they try to access it
+      }
+
+      // Send welcome email to new user
+      try {
+        final hasEmailBeenSent =
+            await WelcomeEmailService.hasWelcomeEmailBeenSent(
+                response.user!.id);
+        if (!hasEmailBeenSent) {
+          await WelcomeEmailService.sendWelcomeEmail(
+            userId: response.user!.id,
+            userEmail: email,
+            userName: fullName,
+          );
+          await WelcomeEmailService.markWelcomeEmailSent(response.user!.id);
+        }
+      } catch (e) {
+        // Don't break signup flow if welcome email fails
       }
 
       return response;
@@ -249,118 +263,55 @@ class AuthService {
   // Sign in with Google
   static Future<AuthResponse> signInWithGoogle() async {
     try {
-      print('🔍 Starting Google Sign-In process...');
-
-      // Check internet connectivity first
-      if (!await _hasInternetConnection()) {
-        throw Exception(
-            'No internet connection. Please check your network and try again.');
-      }
-      print('✅ Internet connection verified');
-
       // Start Google Sign-In flow
-      print('🔑 Starting Google sign-in flow...');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
       if (googleUser == null) {
-        print('❌ Google sign-in cancelled by user');
         throw Exception('Google sign-in was cancelled');
       }
-      print('✅ Google user account obtained: ${googleUser.email}');
 
       // Get Google Auth details
-      print('🔐 Getting Google authentication tokens...');
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        print(
-            '❌ Failed to get Google tokens - Access: ${googleAuth.accessToken != null}, ID: ${googleAuth.idToken != null}');
-        throw Exception('Failed to get Google authentication tokens');
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      if (googleAuth.idToken == null) {
+        throw Exception('Failed to get Google ID token');
       }
-      print('✅ Google authentication tokens obtained');
 
-      // Sign in to Supabase with Google credentials
-      print('🔗 Signing in to Supabase with Google credentials...');
-      final response = await _supabase.auth.signInWithIdToken(
+      // Sign in to Supabase with Google ID token
+      final AuthResponse response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
-        accessToken: googleAuth.accessToken!,
+        accessToken: googleAuth.accessToken,
       );
 
-      if (response.user == null) {
-        print('❌ Supabase sign-in failed - no user returned');
-        throw Exception('Google sign-in failed: No user returned');
-      }
-      print('✅ Successfully signed in to Supabase: ${response.user!.email}');
+      // Handle successful sign-in
+      final User? user = response.user;
+      if (user != null) {
+        try {
+          // Create or update user profile
+          await _createUserProfile(
+            user,
+            googleUser.displayName ?? 'Unknown User',
+          );
 
-      // Create or update user profile
-      try {
-        await _createUserProfile(
-          response.user!,
-          googleUser.displayName ?? 'Unknown User',
-        );
-        print('✅ User profile created/updated');
-      } catch (e) {
-        // Profile creation failed - this is critical for the app to work
-        print(
-            '❌ Critical: Profile creation failed during Google sign in: ${e.toString()}');
-        // Don't throw here as user account was created successfully
-        // The profile will be created when they try to access it
+          // Send welcome email
+          final hasEmailBeenSent = await WelcomeEmailService.hasWelcomeEmailBeenSent(user.id);
+          if (!hasEmailBeenSent) {
+            await WelcomeEmailService.sendGoogleWelcomeEmail(
+              userId: user.id,
+              userEmail: googleUser.email,
+              userName: googleUser.displayName ?? 'Unknown User',
+            );
+            await WelcomeEmailService.markWelcomeEmailSent(user.id);
+          }
+        } catch (e) {
+          print('Post sign-in setup error: $e');
+          // Don't throw here as sign-in was successful
+        }
       }
 
       return response;
-    } on SocketException catch (e) {
-      print('❌ Network error: $e');
-      throw Exception(
-          'Network error: Please check your internet connection and try again.');
-    } on HttpException catch (e) {
-      print('❌ HTTP error: $e');
-      throw Exception('Server error: Please try again later.');
-    } on FormatException catch (e) {
-      print('❌ Format error: $e');
-      throw Exception('Invalid response format. Please try again.');
-    } on AuthException catch (e) {
-      // Handle Supabase auth exceptions
-      print('❌ Supabase Auth error: ${e.message} (Code: ${e.statusCode})');
-      throw Exception('Google sign-in failed: ${e.message ?? 'Unknown error'}');
-    } on PlatformException catch (e) {
-      // Handle platform-specific exceptions including channel connection issues
-      print('❌ Platform error: ${e.message} (Code: ${e.code})');
-      String errorMessage = 'Platform error occurred';
-      if (e.message != null) {
-        if (e.message!.contains('channel')) {
-          errorMessage =
-              'Connection error: Please restart the app and try again.';
-        } else if (e.message!.contains('network')) {
-          errorMessage =
-              'Network error: Please check your internet connection.';
-        } else if (e.message!.contains('DEVELOPER_ERROR')) {
-          errorMessage =
-              'Google Sign-In not configured properly. Please contact support.';
-        } else if (e.code == '10') {
-          errorMessage =
-              'Google Sign-In configuration error. Please check Firebase setup.';
-        } else {
-          errorMessage = 'Platform error: ${e.message}';
-        }
-      }
-      throw Exception(errorMessage);
     } catch (e) {
-      // Handle any other exceptions
-      print('❌ Unexpected error: $e');
-      String errorMessage = e.toString();
-      if (errorMessage.contains('channel')) {
-        throw Exception(
-            'Connection error: Please restart the app and try again.');
-      } else if (errorMessage.contains('network') ||
-          errorMessage.contains('connection')) {
-        throw Exception(
-            'Network error: Please check your internet connection and try again.');
-      } else {
-        throw Exception(
-            'Google sign-in failed: Please try again. Error: $errorMessage');
-      }
+      print('Google sign-in error: $e');
+      rethrow;
     }
   }
 
@@ -406,27 +357,37 @@ class AuthService {
     }
   }
 
-  // Reset password
+  /// Sends a password reset email to the specified email address
   static Future<void> resetPassword(String email) async {
     try {
-      if (email.isEmpty) {
-        throw Exception('Email is required');
-      }
+      print('🔄 Starting password reset for email: $email');
+      final String redirectUrl = 'edubazaar://reset-password';
+      print('📱 Using redirect URL: $redirectUrl');
 
-      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-        throw Exception('Please enter a valid email address');
-      }
-
-      await _supabase.auth.resetPasswordForEmail(email);
-    } on AuthException catch (e) {
-      // Handle Supabase auth exceptions
-      throw Exception('Password reset failed: ${e.message ?? 'Unknown error'}');
-    } on PlatformException catch (e) {
-      // Handle platform-specific exceptions
-      throw Exception('Platform error: ${e.message ?? 'Unknown error'}');
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectUrl,
+      );
+      print('✅ Reset password email sent successfully');
     } catch (e) {
-      // Handle any other exceptions
-      throw Exception('Password reset failed: ${e.toString()}');
+      print('❌ Failed to send reset password email: $e');
+      throw 'Failed to send reset password email: ${e.toString()}';
+    }
+  }
+
+  /// Updates user's password after reset
+  static Future<void> updatePassword(String newPassword) async {
+    try {
+      print('🔄 Starting password update');
+      await _supabase.auth.updateUser(
+        UserAttributes(
+          password: newPassword,
+        ),
+      );
+      print('✅ Password updated successfully');
+    } catch (e) {
+      print('❌ Failed to update password: $e');
+      throw 'Failed to update password: ${e.toString()}';
     }
   }
 
@@ -490,7 +451,6 @@ class AuthService {
           .maybeSingle();
 
       if (existingProfile != null) {
-        print('Profile already exists for user: ${user.id}');
         return;
       }
 
@@ -518,9 +478,7 @@ class AuthService {
       };
 
       await _supabase.from('user_profiles').insert(profileData);
-      print('✅ Profile created successfully for user: ${user.id}');
     } catch (e) {
-      print('❌ Profile creation failed: ${e.toString()}');
       // Throw error instead of just printing so we can handle it
       throw Exception('Profile creation failed: ${e.toString()}');
     }
@@ -529,14 +487,10 @@ class AuthService {
   // Ensure user profile exists (for existing users)
   static Future<void> ensureUserProfileExists() async {
     try {
-      print('🔍 Checking if user profile exists...');
       final user = getCurrentUser();
       if (user == null) {
-        print('❌ No user logged in');
         return;
       }
-
-      print('✅ User found: ${user.id}');
 
       final existingProfile = await _supabase
           .from('user_profiles')
@@ -545,19 +499,13 @@ class AuthService {
           .maybeSingle();
 
       if (existingProfile == null) {
-        print('⚠️ Profile not found for existing user, creating...');
         final displayName = user.userMetadata?['full_name'] as String? ??
             user.email?.split('@')[0] ??
             'User';
-        print('📝 Creating profile with name: $displayName');
         await _createUserProfile(user, displayName);
-        print('✅ Profile created successfully');
-      } else {
-        print('✅ Profile already exists');
       }
     } catch (e) {
-      print('❌ Error ensuring profile exists: ${e.toString()}');
-      print('❌ Error type: ${e.runtimeType}');
+      // Error ensuring profile exists handled silently
     }
   }
 
@@ -584,43 +532,25 @@ class AuthService {
   // Test Google Sign-In configuration (for debugging)
   static Future<void> testGoogleSignInConfig() async {
     try {
-      print('🔍 Testing Google Sign-In configuration...');
-
       // Test 1: Check if Google Sign-In is properly initialized
-      print(
-          '📱 Google Sign-In configured with client ID: ${_googleSignIn.clientId}');
-
       // Test 2: Check current signed-in user
       final currentUser = _googleSignIn.currentUser;
-      print('👤 Current user: ${currentUser?.email ?? 'None'}');
 
       // Test 3: Test sign-out first (clean slate)
       await _googleSignIn.signOut();
-      print('🚪 Signed out from Google');
 
       // Test 4: Check if we can initiate sign-in
-      print('🔑 Starting sign-in test...');
       final GoogleSignInAccount? testUser = await _googleSignIn.signIn();
 
       if (testUser != null) {
-        print('✅ Sign-in successful: ${testUser.email}');
-        print('📧 Display name: ${testUser.displayName}');
-        print('🆔 User ID: ${testUser.id}');
-
         // Test 5: Get authentication details
         final auth = await testUser.authentication;
-        print('🔐 Access token available: ${auth.accessToken != null}');
-        print('🎫 ID token available: ${auth.idToken != null}');
 
         // Test 6: Sign out after test
         await _googleSignIn.signOut();
-        print('✅ Test completed successfully');
-      } else {
-        print('❌ Sign-in returned null');
       }
     } catch (e) {
-      print('❌ Test failed: $e');
+      // Test failed
     }
   }
 }
- 

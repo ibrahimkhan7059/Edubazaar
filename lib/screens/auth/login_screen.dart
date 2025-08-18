@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
 import '../../services/auth_service.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -65,25 +66,20 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Additional client-side validation
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      // Validate email format
       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
         throw Exception('Please enter a valid email address');
       }
 
-      // Validate password
       if (password.isEmpty) {
         throw Exception('Password is required');
       }
 
-      // Perform login
       await AuthService.signInWithEmail(email, password);
 
       if (mounted) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -95,12 +91,10 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         );
 
-        // Navigate to home screen
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
       if (mounted) {
-        // Extract user-friendly error message
         String errorMessage = e.toString();
         if (errorMessage.startsWith('Exception: ')) {
           errorMessage = errorMessage.substring(11);
@@ -138,7 +132,6 @@ class _LoginScreenState extends State<LoginScreen>
       await AuthService.signInWithGoogle();
 
       if (mounted) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -150,12 +143,10 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         );
 
-        // Navigate to home screen
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
       if (mounted) {
-        // Extract user-friendly error message
         String errorMessage = e.toString();
         if (errorMessage.startsWith('Exception: ')) {
           errorMessage = errorMessage.substring(11);
@@ -219,25 +210,13 @@ class _LoginScreenState extends State<LoginScreen>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 20),
-
-                      // Logo and Title
                       _buildHeader(),
-
                       const SizedBox(height: 30),
-
-                      // Login Form
                       _buildLoginForm(),
-
                       const SizedBox(height: 16),
-
-                      // Social Login
                       _buildSocialLogin(),
-
                       const SizedBox(height: 20),
-
-                      // Sign Up Link
                       _buildSignUpLink(),
-
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -327,6 +306,35 @@ class _LoginScreenState extends State<LoginScreen>
 
             // Password Field
             _buildPasswordField(),
+
+            // Forgot Password Button
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ForgotPasswordScreen(),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Forgot Password?',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
 
             const SizedBox(height: 20),
 
@@ -532,4 +540,3 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 }
- 

@@ -56,7 +56,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error checking network status: $e');
+      // Error checking network status handled silently
     }
   }
 
@@ -92,9 +92,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Error loading conversations: $e');
-      print('❌ Error type: ${e.runtimeType}');
-
       // Check if it's a network error
       if (NetworkService.isNetworkError(e)) {
         setState(() {

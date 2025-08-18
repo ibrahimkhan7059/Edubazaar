@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
@@ -72,7 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // Fallback: if loading takes too long, show content anyway
     Future.delayed(const Duration(seconds: 8), () {
       if (mounted && _isLoading) {
-        print('⏰ Fallback: Showing content after timeout');
         setState(() => _isLoading = false);
       }
     });
@@ -107,36 +107,31 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadRealTimeData() async {
     try {
       setState(() => _isLoading = true);
-      print('🔄 Starting to load real-time data...');
 
       // Load current user profile
       final currentUserId = AuthService.getCurrentUserId();
-      print('👤 Current user ID: $currentUserId');
       _currentUserId = currentUserId;
 
       if (currentUserId != null) {
         try {
           final profile = await ProfileService.getCurrentUserProfile();
-          print('✅ Profile loaded: ${profile?.name ?? 'No name'}');
           if (mounted) {
             setState(() => _currentUserProfile = profile);
           }
         } catch (e) {
-          print('❌ Error loading profile: $e');
+          // Error loading profile handled silently
         }
       } else {
-        print('⚠️ No current user ID found');
+        // No current user ID found
       }
 
       // Load recent marketplace listings
       try {
         final listings = await MarketplaceService.getAllListings(limit: 5);
-        print('✅ Listings loaded: ${listings.length} items');
         if (mounted) {
           setState(() => _recentListings = listings);
         }
       } catch (e) {
-        print('❌ Error loading listings: $e');
         if (mounted) {
           setState(() => _recentListings = []);
         }
@@ -149,19 +144,16 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() => _favoriteCount = favs.length);
         }
       } catch (e) {
-        print('❌ Error loading favorites: $e');
         if (mounted) setState(() => _favoriteCount = 0);
       }
 
       // Load upcoming events
       try {
         final events = await CommunityService.getUpcomingEvents();
-        print('✅ Events loaded: ${events.length} items');
         if (mounted) {
           setState(() => _upcomingEvents = events.take(2).toList());
         }
       } catch (e) {
-        print('❌ Error loading events: $e');
         if (mounted) {
           setState(() => _upcomingEvents = []);
         }
@@ -170,23 +162,20 @@ class _HomeScreenState extends State<HomeScreen> {
       // Load recent study groups
       try {
         final groups = await CommunityService.getDiscoverStudyGroups();
-        print('✅ Study groups loaded: ${groups.length} items');
         if (mounted) {
           setState(() => _recentGroups = groups.take(4).toList());
         }
       } catch (e) {
-        print('❌ Error loading study groups: $e');
         if (mounted) {
           setState(() => _recentGroups = []);
         }
       }
 
-      print('✅ All data loading completed');
+      // All data loading completed
     } catch (e) {
-      print('❌ Critical error in _loadRealTimeData: $e');
+      // Critical error in _loadRealTimeData handled silently
     } finally {
       if (mounted) {
-        print('🔄 Setting loading to false');
         setState(() => _isLoading = false);
       }
     }
@@ -196,9 +185,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _updateUserStatus() async {
     try {
       await ProfileService.updateUserLastActive();
-      print('✅ Updated user status on home screen');
     } catch (e) {
-      print('❌ Error updating user status: $e');
+      // Error updating user status handled silently
     }
   }
 
@@ -212,15 +200,13 @@ class _HomeScreenState extends State<HomeScreen> {
         final token = await NotificationService.getDeviceToken();
         if (token != null) {
           await NotificationService.saveFCMTokenToSupabase(token);
-          print('✅ FCM token saved successfully');
         }
       } catch (e) {
-        print('❌ Error saving FCM token: $e');
+        // Error saving FCM token handled silently
       }
 
-      print('✅ Notifications initialized successfully');
+      // Notifications initialized successfully
     } catch (e) {
-      print('❌ Error initializing notifications: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -254,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('Error loading unread count: $e');
+      // Error loading unread count handled silently
     }
   }
 
@@ -286,35 +272,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom App Bar
-            _buildAppBar(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.systemUiOverlayStyle,
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom App Bar
+              _buildAppBar(),
 
-            // Main Content
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                children: [
-                  _buildDashboard(),
-                  _buildMarketplace(),
-                  _buildCommunity(),
-                  _buildProfile(),
-                ],
+              // Main Content
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  },
+                  children: [
+                    _buildDashboard(),
+                    _buildMarketplace(),
+                    _buildCommunity(),
+                    _buildProfile(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        bottomNavigationBar: _buildBottomNavBar(),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 

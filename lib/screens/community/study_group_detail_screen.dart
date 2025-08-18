@@ -70,7 +70,6 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
             value: widget.groupId,
           ),
           callback: (payload) async {
-            print('🔄 Member joined group ${widget.groupId}');
             if (mounted) {
               await _loadGroupDetails();
               await _loadMembers();
@@ -87,7 +86,6 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
             value: widget.groupId,
           ),
           callback: (payload) async {
-            print('🔄 Member left group ${widget.groupId}');
             if (mounted) {
               await _loadGroupDetails();
               await _loadMembers();
@@ -96,7 +94,7 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
         )
         ..subscribe();
     } catch (e) {
-      print('Realtime subscribe error: $e');
+      // Realtime subscription error handled silently
     }
   }
 
@@ -114,7 +112,6 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
             value: widget.groupId,
           ),
           callback: (payload) async {
-            print('🔄 Group updated: ${widget.groupId}');
             if (mounted) {
               await _loadGroupDetails();
             }
@@ -130,7 +127,6 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
             value: widget.groupId,
           ),
           callback: (payload) {
-            print('🗑️ Group deleted: ${widget.groupId}');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -144,19 +140,17 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
         )
         ..subscribe();
     } catch (e) {
-      print('❌ Error subscribing to group row: $e');
+      // Error subscribing to group row handled silently
     }
   }
 
   Future<void> _loadGroupDetails() async {
-    print('🔍 Loading group details for: ${widget.groupId}');
     setState(() => _isLoading = true);
     try {
       final group = await CommunityService.getStudyGroupById(widget.groupId);
 
       // If group is null (deleted), navigate back
       if (group == null) {
-        print('❌ Group not found (likely deleted)');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -173,22 +167,31 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
         _group = group;
       });
 
-      // Load members
-      final members = await CommunityService.getGroupMembers(widget.groupId);
-      setState(() {
-        _members = members;
-      });
-
-      print('✅ Group loaded: ${group.name}');
-      print('📊 Members count: ${members.length}');
+      // Load members with better error handling
+      try {
+        final members = await CommunityService.getGroupMembers(widget.groupId);
+        setState(() {
+          _members = members;
+        });
+      } catch (memberError) {
+        // Error loading members (continuing anyway)
+        // Set empty members list and continue
+        setState(() {
+          _members = [];
+        });
+      }
     } catch (e) {
-      print('❌ Error loading group details: $e');
       if (mounted) {
+        // Don't navigate back immediately, show error but allow retry
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading group: $e')),
+          SnackBar(
+            content: Text('Error loading group: ${e.toString()}'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => _loadGroupDetails(),
+            ),
+          ),
         );
-        // If there's an error loading the group, it might be deleted
-        Navigator.of(context).pop();
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -205,21 +208,26 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
           _members = members;
         });
 
-        // Debug: Compare member counts
-        print('🔍 Member Count Debug:');
-        print('  - Group memberCount from database: ${_group?.memberCount}');
-        print('  - Actual loaded members: ${members.length}');
-        print(
-            '  - Members list: ${members.map((m) => '${m['name']} (${m['role']})').toList()}');
-
+        // Member count validation
         if (_group?.memberCount != members.length) {
-          print('⚠️  WARNING: Member count mismatch!');
-          print('  - Database says: ${_group?.memberCount}');
-          print('  - Actual members: ${members.length}');
+          // Member count mismatch - this is handled by the UI display
         }
       }
     } catch (e) {
-      print('Error loading members: $e');
+      if (mounted) {
+        setState(() {
+          _members = []; // Set empty list on error
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading members: ${e.toString()}'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => _loadMembers(),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -227,15 +235,9 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
     if (_group == null) return;
 
     try {
-      // TODO: Implement getGroupPosts in CommunityService
-      // final posts = await _communityService.getGroupPosts(widget.groupId);
-      // if (mounted) {
-      //   setState(() {
-      //     _posts = posts;
-      //   });
-      // }
+      // Posts functionality to be implemented in future
     } catch (e) {
-      print('Error loading posts: $e');
+      // Error loading posts handled silently
     }
   }
 
@@ -452,10 +454,6 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
   }
 
   Widget _buildGroupHeader() {
-    // Debug print for cover image
-    print('🔍 Building group header for: ${_group?.name}');
-    print('🔍 Cover image URL: ${_group?.coverImageUrl}');
-
     // Get status bar height to ensure background doesn't extend behind it
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
@@ -517,7 +515,6 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
                         );
                       },
                       errorBuilder: (context, error, stackTrace) {
-                        print('Error loading cover image: $error');
                         return Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -652,20 +649,13 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
   }
 
   Widget _buildActionButtons() {
-    print('🔍 Building action buttons for group: ${_group?.name}');
-    print('🔍 isMember: ${_group?.isMember}');
-    print('🔍 role: ${_group?.role}');
-    print('🔍 isPrivate: ${_group?.isPrivate}');
-
     // Don't show any action buttons if user is admin
     if (_group?.role == 'admin') {
-      print('🔍 Admin user - no action buttons shown');
       return const SizedBox.shrink();
     }
 
     // For members - show leave button
     if (_group?.isMember == true) {
-      print('🔍 Showing member buttons (leave group)');
       return Container(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -693,7 +683,6 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
     }
 
     // For non-members - show join button (if public) or private message
-    print('🔍 Showing non-member buttons (join group)');
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -849,14 +838,23 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
                   itemCount: _members.length,
                   itemBuilder: (context, index) {
                     final member = _members[index];
+
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: member['profilePicUrl'] != null
-                            ? NetworkImage(member['profilePicUrl']!)
+                        radius: 20,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage: _getProfileImageUrl(member) != null
+                            ? NetworkImage(_getProfileImageUrl(member)!)
                             : null,
-                        child: member['profilePicUrl'] == null
+                        child: _getProfileImageUrl(member) == null
                             ? Text(
-                                member['name']!.substring(0, 1).toUpperCase())
+                                _getFirstLetter(member['name']),
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              )
                             : null,
                       ),
                       title: Text(member['name']!),
@@ -916,5 +914,22 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen>
       }
     }
     return date.toString();
+  }
+
+  // Helper method to get profile image URL from member data
+  String? _getProfileImageUrl(Map<String, dynamic> member) {
+    final profilePicUrl = member['profilePicUrl'] ?? member['profile_pic_url'];
+    if (profilePicUrl != null && profilePicUrl.toString().isNotEmpty) {
+      return profilePicUrl.toString();
+    }
+    return null;
+  }
+
+  // Helper method to get first letter of name for default avatar
+  String _getFirstLetter(dynamic name) {
+    if (name != null && name.toString().isNotEmpty) {
+      return name.toString().substring(0, 1).toUpperCase();
+    }
+    return 'U';
   }
 }

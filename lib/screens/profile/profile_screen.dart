@@ -12,7 +12,6 @@ import 'user_reviews_screen.dart';
 import 'transaction_history_screen.dart';
 import '../chat/chat_screen.dart';
 import 'user_favourites_screen.dart';
-import 'notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId; // If null, shows current user's profile
@@ -46,7 +45,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserProfile() async {
     try {
-      print('🔍 Loading user profile...');
       final currentUserId = AuthService.getCurrentUserId();
       final targetUserId = widget.userId ?? currentUserId;
 
@@ -55,13 +53,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       isCurrentUser = targetUserId == currentUserId;
-      print('👤 Target user ID: $targetUserId');
-      print('🔄 Is current user: $isCurrentUser');
 
       // Get profile with real-time stats
       final profile = await ProfileService.getUserProfile(targetUserId);
       if (profile == null) {
-        print('❌ Profile is null, creating basic profile...');
         // Try to create a basic profile if it doesn't exist
         final currentUser = AuthService.getCurrentUser();
         if (currentUser != null) {
@@ -80,15 +75,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         throw Exception('Profile not found and could not be created');
       }
 
-      print('✅ Profile loaded successfully: ${profile.name}');
-      print(
-          '📊 Real-time stats: Listings=${profile.totalListings}, Sales=${profile.totalSales}, Rating=${profile.averageRating}');
       setState(() {
         userProfile = profile;
         isLoading = false;
       });
     } catch (e) {
-      print('❌ Error loading profile: $e');
       setState(() {
         isLoading = false;
       });
@@ -318,7 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    // TODO: Implement phone call
+                    // Phone call feature to be implemented
                   },
                   icon: const Icon(Icons.phone),
                   label: const Text('Call'),
@@ -400,11 +391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                               // Only reload if profile was actually updated
                               if (result == true) {
-                                print('🔄 Profile was updated, reloading...');
                                 await _loadUserProfile();
-                              } else {
-                                print(
-                                    '🔄 No update needed, preserving current state');
                               }
                             }
                           },
@@ -552,8 +539,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   : '${userProfile!.name}\'s Listings',
               '${userProfile?.totalListings ?? 0} items',
               () {
-                print(
-                    '🔍 Navigating to UserListingsScreen for user: ${userProfile!.id} (${userProfile!.name})');
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -577,29 +562,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       builder: (context) => const UserFavouritesScreen(),
                     ),
                   );
-                },
-              ),
-            if (isCurrentUser)
-              _buildMenuItem(
-                Icons.notifications,
-                'Notification Settings',
-                'Configure your notification preferences',
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationSettingsScreen(),
-                    ),
-                  );
-                },
-              ),
-            if (isCurrentUser)
-              _buildMenuItem(
-                Icons.notifications_active,
-                'Test Notifications',
-                'Test different types of notifications',
-                () {
-                  Navigator.pushNamed(context, '/notification-test');
                 },
               ),
             if (isCurrentUser)
@@ -835,12 +797,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   // Only reload if profile was actually updated
                   if (result == true) {
-                    print(
-                        '🔄 Profile was updated from bottom sheet, reloading...');
                     await _loadUserProfile();
-                  } else {
-                    print(
-                        '🔄 No update from bottom sheet, preserving current state');
                   }
                 },
                 icon: const Icon(Icons.edit),
@@ -902,7 +859,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Store current profile image URL before any operations
       final currentProfilePicUrl = userProfile?.profilePicUrl;
-      print('🖼️ BEFORE bio save - Profile pic URL: $currentProfilePicUrl');
 
       await _supabase
           .from('user_profiles')
@@ -939,16 +895,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           totalDonationsReceived: userProfile!.totalDonationsReceived,
         );
 
-        print(
-            '🖼️ AFTER bio save - Profile pic URL: ${newProfile.profilePicUrl}');
-
         setState(() {
           userProfile = newProfile;
           isEditingBio = false;
         });
-
-        print(
-            '🖼️ FINAL - Profile pic URL in state: ${userProfile!.profilePicUrl}');
       }
 
       ScaffoldMessenger.of(context).showSnackBar(

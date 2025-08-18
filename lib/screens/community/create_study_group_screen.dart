@@ -129,27 +129,18 @@ class _CreateStudyGroupScreenState extends State<CreateStudyGroupScreen> {
     });
 
     try {
-      print('🔍 Starting group creation...');
-      print('🔍 Current user ID: ${CommunityService.currentUserId}');
-
       String? coverImageUrl;
 
       // Upload cover image if selected
       if (_coverImage != null) {
-        print('📤 Uploading cover image...');
         try {
           coverImageUrl =
               await ImageService.uploadGroupCoverImage(_coverImage!);
-          print('✅ Cover image uploaded: $coverImageUrl');
         } catch (e) {
-          print('❌ Cover image upload failed: $e');
           // Continue without cover image
         }
       }
 
-      print('📝 Creating study group...');
-      print('🔍 Selected tags: $_selectedTags');
-      print('🔍 Selected tags length: ${_selectedTags.length}');
       final groupData = {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -160,11 +151,8 @@ class _CreateStudyGroupScreenState extends State<CreateStudyGroupScreen> {
         'cover_image_url': coverImageUrl,
       };
 
-      print('📊 Group data: $groupData');
-
       // Create the group
       final groupId = await CommunityService.createStudyGroup(groupData);
-      print('✅ Group created with ID: $groupId');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -176,8 +164,6 @@ class _CreateStudyGroupScreenState extends State<CreateStudyGroupScreen> {
         Navigator.pop(context, groupId);
       }
     } catch (e) {
-      print('❌ Error creating group: $e');
-      print('❌ Error type: ${e.runtimeType}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

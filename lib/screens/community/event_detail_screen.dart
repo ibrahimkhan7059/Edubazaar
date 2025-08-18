@@ -77,7 +77,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             value: widget.eventId,
           ),
           callback: (payload) {
-            print('🗑️ Event deleted: ${widget.eventId}');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -117,19 +116,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         )
         ..subscribe();
     } catch (e) {
-      print('❌ Error setting up realtime subscription: $e');
+      // Error setting up realtime subscription handled silently
     }
   }
 
   Future<void> _loadEventDetails() async {
-    print('🔍 Loading event details for: ${widget.eventId}');
     setState(() => _isLoading = true);
     try {
       final event = await CommunityService.getEventById(widget.eventId);
 
       // If event is null (deleted), navigate back
       if (event == null) {
-        print('❌ Event not found (likely deleted)');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -162,11 +159,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           _pendingRequests = pendingRequests;
         });
       }
-
-      print('✅ Event loaded: ${event.title}');
-      print('📊 Attendees count: ${attendees.length}');
     } catch (e) {
-      print('❌ Error loading event details: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading event: $e')),
@@ -229,7 +222,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  print('🔄 Retrying to load event: ${widget.eventId}');
                   _loadEventDetails();
                 },
                 style: ElevatedButton.styleFrom(
@@ -644,7 +636,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             const SizedBox(height: 16),
             GestureDetector(
               onTap: () {
-                // TODO: Open meeting link
+                // Meeting link functionality to be implemented
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Opening meeting link...')),
                 );
@@ -1566,8 +1558,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 if (!mounted) return;
 
                 if (success) {
-                  print('✅ Event deleted successfully');
-
                   // Show success message and force navigation
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -1582,7 +1572,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     Navigator.of(context).pop();
                   });
                 } else {
-                  print('❌ Failed to delete event');
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Failed to delete event'),
@@ -1592,7 +1581,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 }
               } catch (e) {
                 if (!mounted) return;
-                print('❌ Error deleting event: $e');
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Error: $e'),
@@ -1614,7 +1602,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   // Show attendee profile
   void _showAttendeeProfile(Map<String, dynamic> attendee) async {
     // Profile dialog removed - no action needed
-    print('🔍 Profile dialog removed for attendee: ${attendee['name']}');
   }
 
   // Show remove attendee confirmation dialog
@@ -1703,7 +1690,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error removing attendee: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1982,7 +1968,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error accepting request: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2029,7 +2014,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error rejecting request: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

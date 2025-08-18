@@ -94,20 +94,42 @@ google-services.json
 GoogleService-Info.plist
 firebase_app_id_file.json
 firebase_options.dart
+functions/service-account.json
+edubazaar-new-97923-483d11551101.json
 
 # Environment files
 .env
 .env.*
+*.env
 
 # Supabase
 **/supabase/.branches
 **/supabase/.temp
 **/supabase/.env
+lib/config/supabase_config.dart
 
 # Service account keys and secrets
 *.json.key
 *-service-account.json
-edubazaar-new-97923-483d11551101.json
+service-account.json
+**/functions/service-account.json
 
 # Local configuration
+lib/config/*_config.dart
 lib/config/supabase_config.dart
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~.nib
+*.swp
+*.lock
+*.DS_Store
+*.log

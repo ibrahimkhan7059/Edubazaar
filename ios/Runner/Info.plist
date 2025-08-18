@@ -2,6 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.supabase.edubazaar</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>io.supabase.edubazaar</string>
+		</dict>
+	</array>
+
+	<!-- Deep linking configuration -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
+
+	<!-- Associated Domains for Universal Links -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:${supabaseProjectId}.supabase.co</string>
+	</array>
+	
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

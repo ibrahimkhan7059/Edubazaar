@@ -178,7 +178,6 @@ class _SplashScreenState extends State<SplashScreen>
         }
       } catch (e) {
         // If there's an error checking login state, default to login screen
-        print('Error checking login state: $e');
         Navigator.pushReplacementNamed(context, '/login');
       }
     }

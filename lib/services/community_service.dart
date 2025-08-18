@@ -102,7 +102,12 @@ class CommunityService {
           .from('study_groups')
           .select('*')
           .eq('id', groupId)
-          .single();
+          .maybeSingle();
+
+      // If group doesn't exist, return null
+      if (groupResponse == null) {
+        return null;
+      }
 
       // Check if current user is a member
       final memberResponse = await _supabase
@@ -882,11 +887,19 @@ class CommunityService {
       final profilesMap = <String, Map<String, dynamic>>{};
 
       for (final userId in userIds) {
-        final profileResponse =
-            await _supabase.from('profiles').select().eq('id', userId).single();
+        try {
+          final profileResponse = await _supabase
+              .from('user_profiles')
+              .select()
+              .eq('id', userId)
+              .maybeSingle();
 
-        if (profileResponse != null) {
-          profilesMap[userId] = Map<String, dynamic>.from(profileResponse);
+          if (profileResponse != null) {
+            profilesMap[userId] = Map<String, dynamic>.from(profileResponse);
+          }
+        } catch (e) {
+          print('⚠️ Profile not found for user $userId: $e');
+          // Continue with default values
         }
       }
 
@@ -894,12 +907,20 @@ class CommunityService {
       return (membersResponse as List).map((member) {
         final userId = member['user_id'] as String;
         final profile = profilesMap[userId];
-        return <String, dynamic>{
+
+        final memberData = <String, dynamic>{
           ...Map<String, dynamic>.from(member),
-          'name': profile?['full_name'] ?? 'Unknown User',
-          'avatar_url': profile?['avatar_url'],
+          'name': (profile?['name']?.isNotEmpty == true)
+              ? profile!['name']
+              : 'Unknown User',
+          'email': profile?['email'] ?? 'No email',
+          'profilePicUrl': profile?['profile_pic_url'],
+          'profile_pic_url': profile?['profile_pic_url'], // For compatibility
+          'avatar_url': profile?['profile_pic_url'],
           'university': profile?['university'],
         };
+
+        return memberData;
       }).toList();
     } catch (e) {
       throw Exception('Failed to fetch group members: $e');
@@ -971,7 +992,11 @@ class CommunityService {
           .select('role')
           .eq('group_id', groupId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
+
+      if (membership == null) {
+        throw Exception('User is not a member of this group');
+      }
 
       if (membership['role'] == 'admin') {
         throw Exception('Cannot remove admin members');
@@ -998,8 +1023,8 @@ class CommunityService {
       return (response as List)
           .map((user) => {
                 'id': user['id'],
-                'name': user['name'],
-                'email': user['email'],
+                'name': user['name'] ?? 'Unknown User',
+                'email': user['email'] ?? 'No email',
                 'profile_pic_url': user['profile_pic_url'],
               })
           .toList();
